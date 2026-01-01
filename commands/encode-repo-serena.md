@@ -62,16 +62,19 @@ Parse for:
 
 ## Memory Targets by Project Profile
 
-| Profile | Phase 1 | Phase 1B | Phase 2 | Phase 2B | Phase 3 | Phase 4 | Phase 5 | Total |
-|---------|---------|----------|---------|----------|---------|---------|---------|-------|
-| Small Simple | 3-5 | 1-2 | 3-5 | 3-5 entities | 3-5 | 2-4 | 2-3 | 15-27 memories + entities |
-| Small Complex | 5-7 | 1-2 | 5-8 | 5-10 entities | 5-8 | 4-6 | 3-5 | 26-42 memories + entities |
-| Medium Standard | 5-10 | 1-2 | 10-15 | 10-20 entities | 8-12 | 5-10 | 5-8 | 35-60 memories + entities |
-| Large | 8-12 | 2-3 | 15-20 | 20-40 entities | 12-18 | 10-15 | 8-12 | 60-100 memories + entities |
+| Profile | Phase 1 | Phase 1B | Phase 2 | Phase 2B | Phase 3 | Phase 4 | Phase 5 | Phase 6B | Phase 7B | Total |
+|---------|---------|----------|---------|----------|---------|---------|---------|----------|----------|-------|
+| Small Simple | 3-5 | 1-2 | 3-5 | 3-5 entities | 3-5 | 2-4 | 2-3 | 1 doc + 1 mem | 1 doc + 1 mem | 17-31 memories + 2 docs + entities |
+| Small Complex | 5-7 | 1-2 | 5-8 | 5-10 entities | 5-8 | 4-6 | 3-5 | 1 doc + 1 mem | 1 doc + 1 mem | 28-46 memories + 2 docs + entities |
+| Medium Standard | 5-10 | 1-2 | 10-15 | 10-20 entities | 8-12 | 5-10 | 5-8 | 1-2 docs + 1-2 mems | 1 doc + 1 mem | 38-66 memories + 2-3 docs + entities |
+| Large | 8-12 | 2-3 | 15-20 | 20-40 entities | 12-18 | 10-15 | 8-12 | 2-4 docs + 2-4 mems | 1-2 docs + 1-2 mems | 66-112 memories + 3-6 docs + entities |
 
 **Notes**:
+- Phase 1 now includes project.notes update (instant context primer)
 - Phase 1B creates 1-3 dependency memories per project
 - Phase 2B creates entities (not memories) for components and their relationships
+- Phase 6B creates Symbol Index document(s) with entry memory - split by layer for large projects
+- Phase 7B creates Architecture Reference document with entry memory
 - Serena-enhanced encoding may discover more architectural detail, potentially exceeding these targets
 
 ---
@@ -147,6 +150,29 @@ execute_forgetful_tool("create_project", {
   "repo_name": "owner/repo"
 })
 ```
+
+### Update Project Notes
+
+After project creation (or if notes are empty), populate with high-level overview:
+```
+execute_forgetful_tool("update_project", {
+  "project_id": <id>,
+  "notes": "Entry: python3 -m ProjectName.main <mode>
+Tech: Python 3.12, ClickHouse, XGBoost, FastAPI, Streamlit
+Architecture: 6-layer (Data→Domain→Processing→ML→Strategy→Presentation)
+Key patterns: Repository, Async generators, Batch writes, Factory
+Core components: ConnectionPool, Fetchers, Writers, ML Pipeline"
+})
+```
+
+**Notes format guidance** (500-1000 chars max):
+- Entry point command
+- Tech stack summary (language, major frameworks, database)
+- Architecture pattern (layer count, pattern name)
+- Key patterns used
+- Core components (top 5 by importance)
+
+This provides instant context without querying memories.
 
 ### Create Foundation Memories
 
@@ -493,6 +519,96 @@ execute_forgetful_tool("create_code_artifact", {
 
 ---
 
+## Phase 6B: Symbol Index Document
+
+**Purpose**: Compile Serena's LSP symbol analysis into a permanent, searchable Forgetful document.
+
+This captures symbol locations, relationships, and reference counts that would otherwise be lost when Serena is not active.
+
+### Step 1: Aggregate Symbol Data
+
+Collect from all `get_symbols_overview` and `find_symbol` calls during Phase 2:
+- Classes with file locations and line numbers
+- Interfaces with their implementations
+- Key functions with callers (from `find_referencing_symbols`)
+- Reference counts for each symbol
+
+### Step 2: Create Symbol Index Document
+
+```
+execute_forgetful_tool("create_document", {
+  "title": "[Project] - Symbol Index",
+  "description": "LSP-accurate symbol listing with locations, relationships, and reference counts. Generated via Serena analysis.",
+  "content": "<structured markdown table - see format below>",
+  "document_type": "markdown",
+  "project_id": <id>,
+  "tags": ["symbol-index", "reference", "navigation"]
+})
+```
+
+**Document Format:**
+```markdown
+# [Project] - Symbol Index
+
+Generated: [date]
+Total: X classes, Y interfaces, Z functions
+
+## Classes
+
+| Symbol | Location | Description | Refs |
+|--------|----------|-------------|------|
+| ClassName | path/file.py:line | Brief description | count |
+| ... | ... | ... | ... |
+
+## Interfaces
+
+| Symbol | Location | Implementations |
+|--------|----------|-----------------|
+| InterfaceName | path/file.py:line | Impl1, Impl2 |
+| ... | ... | ... |
+
+## Key Functions
+
+| Symbol | Location | Called By |
+|--------|----------|-----------|
+| func_name | path/file.py:line | Caller1, Caller2 |
+| ... | ... | ... |
+```
+
+### Step 3: Create Entry Memory
+
+Create an atomic memory that summarizes the index and links to the document:
+```
+execute_forgetful_tool("create_memory", {
+  "title": "[Project] - Symbol Index Reference",
+  "content": "Symbol index contains X classes, Y interfaces, Z functions.
+              Top referenced: [list top 5 by ref count].
+              Key interfaces: [list with implementation counts].
+              Full index in linked document.",
+  "context": "Entry point for symbol navigation - links to full index document",
+  "keywords": ["symbols", "classes", "functions", "navigation", "index"],
+  "tags": ["reference", "navigation", "symbol-index"],
+  "importance": 8,
+  "project_ids": [<id>],
+  "document_ids": [<symbol_index_doc_id>]
+})
+```
+
+### Size Guidelines
+
+| Project Size | Est. Symbols | Doc Size | Split? |
+|--------------|--------------|----------|--------|
+| Small | <50 | <2000 words | No |
+| Medium | 50-150 | 2000-5000 words | No |
+| Large | 150+ | >5000 words | Yes, by layer |
+
+**If splitting** (large projects):
+- Create separate docs per architectural layer: `[Project] - Symbol Index: Data Layer`
+- Each doc gets its own entry memory
+- Entry memories link to their respective documents
+
+---
+
 ## Phase 7: Documents (as needed)
 
 For content >400 words (detailed guides, comprehensive analysis):
@@ -507,6 +623,112 @@ execute_forgetful_tool("create_document", {
 ```
 
 Create 3-5 atomic memories as entry points, linked via `document_ids`.
+
+---
+
+## Phase 7B: Architecture Document
+
+**Purpose**: Consolidate architecture analysis into a comprehensive reference document that persists Serena's insights.
+
+This creates the definitive architecture reference, accessible even when Serena is not active.
+
+### Step 1: Synthesize Architecture Content
+
+Combine insights from:
+- Phase 2 architecture memories (symbol-level analysis)
+- Phase 2B entity relationships (component graph)
+- Phase 3 pattern discoveries
+- Serena's `find_referencing_symbols` relationship data
+
+### Step 2: Create Architecture Document
+
+```
+execute_forgetful_tool("create_document", {
+  "title": "[Project] - Architecture Reference",
+  "description": "Comprehensive architecture documentation with layer details, component relationships, and design patterns. Generated via Serena symbol analysis.",
+  "content": "<structured architecture doc - see format below>",
+  "document_type": "markdown",
+  "project_id": <id>,
+  "tags": ["architecture", "reference", "design"]
+})
+```
+
+**Document Format:**
+```markdown
+# [Project] - Architecture Reference
+
+Generated: [date]
+
+## Overview
+
+[2-3 paragraph summary of what the system does and how it's structured]
+
+## Architecture Diagram
+
+┌─────────────────────────────────────────────────────────────┐
+│         Presentation Layer                                   │
+│  (Streamlit Dashboard + FastAPI Prediction Server)           │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+[Continue with layer diagram...]
+
+## Layer Details
+
+### [Layer Name]
+
+**Purpose**: [what this layer does]
+
+**Key Components**:
+- ComponentName (location: path/file.py): [brief description]
+  - Key methods: method1(), method2()
+  - Used by: [list consumers from find_referencing_symbols]
+
+**Patterns Used**: [patterns in this layer]
+
+### [Next Layer...]
+
+## Cross-Cutting Concerns
+
+### Error Handling
+[how errors flow through the system]
+
+### Configuration
+[how config is managed]
+
+### Testing
+[testing approach and locations]
+
+## Key Design Decisions
+
+[Only if documented in repo - from Phase 5]
+```
+
+### Step 3: Create Entry Memory
+
+Create an atomic memory that summarizes and links to the document:
+```
+execute_forgetful_tool("create_memory", {
+  "title": "[Project] - Architecture Reference",
+  "content": "[Layer count]-layer architecture: [list layers].
+              Key patterns: [top 4-5 patterns].
+              Core components: [top 5 by reference count].
+              Full reference in linked document.",
+  "context": "Entry point for architecture deep-dives - links to comprehensive document",
+  "keywords": ["architecture", "layers", "patterns", "design", "structure"],
+  "tags": ["architecture", "reference", "foundation"],
+  "importance": 9,
+  "project_ids": [<id>],
+  "document_ids": [<arch_doc_id>]
+})
+```
+
+### Size Guidelines
+
+- **Target**: 3000-8000 words
+- **If exceeding 8000 words**, consider splitting by:
+  - Layer (Data Architecture, ML Architecture, API Architecture)
+  - Concern (Core Architecture, Integration Points, Deployment)
+- Each split doc gets its own entry memory
 
 ---
 
@@ -526,16 +748,18 @@ This helps future Serena sessions understand the project faster.
 
 ## Execution Guidelines
 
-1. **Execute phases in order**: 0 → 1 → 1B → 2 → 2B → 3 → 4 → 5 → 6 → 7 → 8
+1. **Execute phases in order**: 0 → 1 (with notes) → 1B → 2 → 2B → 3 → 4 → 5 → 6 → 6B → 7 → 7B → 8
 2. **Leverage Serena's strengths**: Symbol analysis over text search
 3. **Track relationships**: find_referencing_symbols is powerful - use it
-4. **Deduplicate entities**: Always search before creating
-5. **Use Context7**: Validate framework usage assumptions
-6. **Skip phases** with good existing coverage
-7. **Update outdated memories** as discovered
-8. **Link new memories** to existing related memories
-9. **Link entities to memories**: Enable bidirectional discovery
-10. **Mark obsolete** memories that reference removed code
+4. **Aggregate symbol data**: Collect symbols during Phase 2 for use in Phase 6B
+5. **Deduplicate entities**: Always search before creating
+6. **Use Context7**: Validate framework usage assumptions
+7. **Skip phases** with good existing coverage
+8. **Update outdated memories** as discovered
+9. **Link new memories** to existing related memories
+10. **Link entities to memories**: Enable bidirectional discovery
+11. **Create entry memories**: Always link documents via document_ids in entry memories
+12. **Mark obsolete** memories that reference removed code
 
 ## Quality Principles
 
@@ -594,6 +818,44 @@ execute_forgetful_tool("get_entity_relationships", {
   "direction": "outgoing"
 })
 ```
+
+### Test Documents
+```
+execute_forgetful_tool("list_documents", {
+  "project_id": <project_id>
+})
+```
+
+Should show Symbol Index and Architecture Reference documents.
+
+### Test Document Retrieval
+```
+execute_forgetful_tool("get_document", {
+  "document_id": <symbol_index_doc_id>
+})
+```
+
+Verify symbol table is structured and contains accurate locations.
+
+### Test Entry Memory Links
+```
+execute_forgetful_tool("query_memory", {
+  "query": "symbol index navigation classes",
+  "query_context": "Verifying entry memories link to documents",
+  "project_ids": [<project_id>]
+})
+```
+
+Should return entry memory with `document_ids` populated. The entry memory provides quick context; the linked document provides full detail.
+
+### Test Project Notes
+```
+execute_forgetful_tool("get_project", {
+  "project_id": <project_id>
+})
+```
+
+Verify `notes` field contains high-level overview (entry point, tech stack, architecture, key patterns).
 
 Test with architecture questions - Serena-encoded repos should answer accurately.
 
