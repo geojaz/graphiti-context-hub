@@ -57,20 +57,51 @@ Parse for:
 
 ## Memory Targets by Project Profile
 
-| Profile | Phase 1 | Phase 1B | Phase 2 | Phase 2B | Phase 3 | Phase 4 | Phase 5 | Phase 6B | Phase 7B | Total |
-|---------|---------|----------|---------|----------|---------|---------|---------|----------|----------|-------|
-| Small Simple | 3-5 | 1-2 | 3-5 | 3-5 entities | 3-5 | 2-4 | 2-3 | 1 doc + 1 mem | 1 doc + 1 mem | 17-31 memories + 2 docs + entities |
-| Small Complex | 5-7 | 1-2 | 5-8 | 5-10 entities | 5-8 | 4-6 | 3-5 | 1 doc + 1 mem | 1 doc + 1 mem | 28-46 memories + 2 docs + entities |
-| Medium Standard | 5-10 | 1-2 | 10-15 | 10-20 entities | 8-12 | 5-10 | 5-8 | 1-2 docs + 1-2 mems | 1 doc + 1 mem | 38-66 memories + 2-3 docs + entities |
-| Large | 8-12 | 2-3 | 15-20 | 20-40 entities | 12-18 | 10-15 | 8-12 | 2-4 docs + 2-4 mems | 1-2 docs + 1-2 mems | 66-112 memories + 3-6 docs + entities |
+| Profile | Phase 1 | Phase 1B | Phase 2 | Phase 2B | Phase 3 | Phase 4 | Phase 5 | Phase 6 | Phase 6B | Phase 7B | Total |
+|---------|---------|----------|---------|----------|---------|---------|---------|---------|----------|----------|-------|
+| Small Simple | 3-5 | 1-2 | 3-5 | 3-5 entities | 3-5 | 2-4 | 0-2 | 3-5 artifacts | 1 doc + 1 mem | 1 doc + 1 mem | 17-31 memories + 2 docs + 3-5 artifacts + entities |
+| Small Complex | 5-7 | 1-2 | 5-8 | 5-10 entities | 5-8 | 4-6 | 0-3 | 5-8 artifacts | 1 doc + 1 mem | 1 doc + 1 mem | 28-46 memories + 2 docs + 5-8 artifacts + entities |
+| Medium Standard | 5-10 | 1-2 | 10-15 | 10-20 entities | 8-12 | 5-10 | 0-5 | 5-10 artifacts | 1-2 docs + 1-2 mems | 1 doc + 1 mem | 38-66 memories + 2-3 docs + 5-10 artifacts + entities |
+| Large | 8-12 | 2-3 | 15-20 | 20-40 entities | 12-18 | 10-15 | 0-8 | 8-15 artifacts | 2-4 docs + 2-4 mems | 1-2 docs + 1-2 mems | 66-112 memories + 3-6 docs + 8-15 artifacts + entities |
 
 **Notes**:
 - Phase 1 now includes project.notes update (instant context primer)
 - Phase 1B creates 1-3 dependency memories per project
-- Phase 2B creates entities (not memories) for components and their relationships
+- **Phase 2B is MANDATORY** - creates entities for components and their relationships
+- Phase 5 is CONDITIONAL - only if explicit documentation exists (see Phase 5 guidelines)
+- **Phase 6 is MANDATORY** - minimum 3 code artifacts for any project
 - Phase 6B creates Symbol Index document(s) with entry memory - split by layer for large projects
 - Phase 7B creates Architecture Reference document with entry memory
-- Serena-enhanced encoding may discover more architectural detail, potentially exceeding these targets
+
+---
+
+## Phase Completion Gates
+
+**CRITICAL**: Do not proceed to the next phase until the current phase meets its minimum targets.
+
+After each phase, report:
+```
+Phase [N] Complete:
+- Created: [X] memories, [Y] entities, [Z] artifacts
+- Minimum required: [targets from table above]
+- Status: ✅ Met / ❌ Not met (explain gaps)
+```
+
+**Mandatory phases** (cannot skip):
+- Phase 0: Discovery
+- Phase 1: Foundation
+- Phase 2: Architecture
+- **Phase 2B: Entity Graph** (minimum 3 entities for any project)
+- Phase 3: Patterns (minimum 3 pattern memories)
+- Phase 6: Code Artifacts (minimum 3 artifacts)
+- Phase 6B: Symbol Index
+- Phase 7B: Architecture Document
+
+**Conditional phases** (skip only if criteria not met):
+- Phase 1B: Dependencies (skip if single-file script with no deps)
+- Phase 4: Features (skip if <3 distinct features)
+- Phase 5: Decisions (skip if NO explicit documentation found - see guidelines)
+- Phase 7: Additional Documents (skip if no long-form content needed)
 
 ---
 
@@ -311,9 +342,29 @@ For each architectural layer discovered:
 
 ---
 
-## Phase 2B: Entity Graph Creation
+## Phase 2B: Entity Graph Creation (MANDATORY)
 
 **Purpose**: Build a knowledge graph of project components and their relationships in Forgetful.
+
+**THIS PHASE IS MANDATORY** - Minimum 3 entities for any project.
+
+### Why Entities Matter
+
+Entities enable:
+- Cross-project discovery ("What projects use FastAPI?")
+- Relationship mapping ("What depends on this component?")
+- Knowledge graph navigation beyond text search
+- Grounding abstract concepts in concrete components
+
+Without entities, the encoding is incomplete. An agent querying "what components exist" will get nothing.
+
+### Minimum Entity Requirements
+
+| Project Size | Component Entities | Library/Framework Entities | Total Minimum |
+|--------------|-------------------|---------------------------|---------------|
+| Small | 2-3 core classes | 1-2 key deps | 3-5 |
+| Medium | 5-10 services/modules | 3-5 frameworks | 10-20 |
+| Large | 10-20 major components | 5-10 key deps | 20-40 |
 
 ### Entity Deduplication (ALWAYS CHECK FIRST)
 
@@ -427,30 +478,95 @@ This enables bidirectional discovery:
 - Find entity → get related memories
 - Query memories → discover linked entities
 
----
-
-## Phase 3: Pattern Discovery (8-12 memories)
-
-### Search for Common Patterns
+### Phase 2B Completion Checkpoint
 
 ```
+Phase 2B Complete:
+- Component entities created: [count] (minimum 2-3)
+- Library/framework entities created: [count] (minimum 1-2)
+- Relationships created: [count]
+- Entities linked to memories: [count]
+- Status: ✅ Met minimum / ❌ Not met (create more before proceeding)
+```
+
+**DO NOT proceed to Phase 3 until minimum entity count is met.**
+
+---
+
+## Phase 3: Pattern Discovery (8-12 memories, minimum 3)
+
+**Purpose**: Document recurring implementation patterns that define how the codebase works.
+
+### Pattern Categories to Search
+
+**1. Concurrency/Async Patterns**
+```
 mcp__plugin_serena_serena__search_for_pattern({
-  "substring_pattern": "async def",
+  "substring_pattern": "async def|await|asyncio|yield",
   "restrict_search_to_code_files": true,
-  "context_lines_before": 2,
   "context_lines_after": 5
 })
 ```
 
-Useful patterns to search:
-- Error handling: `except|catch|Error`
-- Dependency injection: `Depends|@inject|Container`
-- Decorators: `@app\.|@router\.|@middleware`
-- Database patterns: `session|transaction|commit`
+**2. Error Handling Patterns**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "except.*:|catch\\s*\\(|raise|throw",
+  "restrict_search_to_code_files": true
+})
+```
+
+**3. Dependency Injection / IoC**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "Depends\\(|@inject|Container|def __init__\\(self,.*:",
+  "restrict_search_to_code_files": true
+})
+```
+
+**4. Decorator/Middleware Patterns**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "@app\\.|@router\\.|@middleware|@(before|after)",
+  "restrict_search_to_code_files": true
+})
+```
+
+**5. Database/Transaction Patterns**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "session|transaction|commit|rollback|with.*connection",
+  "restrict_search_to_code_files": true
+})
+```
+
+**6. Factory/Builder Patterns**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "Factory|Builder|create_|build_|make_",
+  "restrict_search_to_code_files": true
+})
+```
+
+**7. Repository/Data Access Patterns**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "Repository|DAO|DataAccess|load_|save_|find_",
+  "restrict_search_to_code_files": true
+})
+```
+
+**8. Event/Observer Patterns**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "emit|on_|subscribe|publish|EventHandler|Observer",
+  "restrict_search_to_code_files": true
+})
+```
 
 ### Analyze Pattern Usage
 
-For each pattern found, use symbol analysis:
+For each pattern found with >3 occurrences:
 ```
 mcp__plugin_serena_serena__find_symbol({
   "name_path_pattern": "pattern_name",
@@ -459,20 +575,88 @@ mcp__plugin_serena_serena__find_symbol({
 })
 ```
 
+Use `find_referencing_symbols` to understand how patterns are used:
+```
+mcp__plugin_serena_serena__find_referencing_symbols({
+  "name_path": "PatternClass",
+  "relative_path": "src/patterns/pattern.py"
+})
+```
+
 ### Create Pattern Memories
 
-Document recurring patterns with actual code locations and usage counts.
+For each significant pattern (used 3+ times):
+```
+execute_forgetful_tool("create_memory", {
+  "title": "[Project] - [Pattern Name] Pattern",
+  "content": "Pattern: [name]. Used for: [purpose].
+              Locations: [list files/classes using it].
+              Implementation: [brief description of how it works].
+              Usage count: [X] occurrences across codebase.",
+  "context": "Recurring implementation pattern for [purpose]",
+  "keywords": ["pattern", "<pattern-name>", "<domain>"],
+  "tags": ["pattern", "implementation"],
+  "importance": 7,
+  "project_ids": [<project_id>]
+})
+```
+
+### Phase 3 Completion Checkpoint
+
+```
+Phase 3 Complete:
+- Patterns searched: [list categories checked]
+- Patterns documented: [count] (minimum 3)
+- Pattern memories created: [list titles]
+- Status: ✅ Met minimum / ❌ Not met (continue searching)
+```
+
+**Minimum 3 pattern memories required.** If fewer than 3 patterns found, document whatever exists (even basic ones like "error handling approach").
 
 ---
 
-## Phase 4: Critical Features (1-2 per feature)
+## Phase 4: Critical Features (1-2 per feature, minimum 3 features)
+
+**Purpose**: Document major user-facing features and their implementation flows.
 
 ### Identify Features via Symbol Analysis
 
-Look for route handlers, API endpoints, main workflows:
+**1. API Endpoints (REST/GraphQL)**
 ```
 mcp__plugin_serena_serena__search_for_pattern({
-  "substring_pattern": "@(app|router)\\.(get|post|put|delete)",
+  "substring_pattern": "@(app|router)\\.(get|post|put|delete|patch)|@(Query|Mutation)",
+  "restrict_search_to_code_files": true
+})
+```
+
+**2. CLI Commands**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "@click\\.|@command|argparse|subparser",
+  "restrict_search_to_code_files": true
+})
+```
+
+**3. Background Jobs/Tasks**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "@task|@job|celery|schedule|cron",
+  "restrict_search_to_code_files": true
+})
+```
+
+**4. UI Pages/Components (for frontend)**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "export.*function.*Page|def.*page|class.*View",
+  "restrict_search_to_code_files": true
+})
+```
+
+**5. Main Workflows**
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "def main|def run|def process|def execute",
   "restrict_search_to_code_files": true
 })
 ```
@@ -482,39 +666,219 @@ mcp__plugin_serena_serena__search_for_pattern({
 For each feature:
 1. Find the entry point symbol
 2. Use `find_referencing_symbols` to trace downstream
-3. Document the complete flow in a memory
+3. Identify all components involved
+4. Document the complete flow
+
+```
+mcp__plugin_serena_serena__find_referencing_symbols({
+  "name_path": "endpoint_function",
+  "relative_path": "src/routes/feature.py"
+})
+```
+
+### Create Feature Memories
+
+For each major feature:
+```
+execute_forgetful_tool("create_memory", {
+  "title": "[Project] - [Feature Name] Implementation",
+  "content": "Feature: [user-facing description].
+              Entry point: [file:function].
+              Flow: [step-by-step through components].
+              Key components: [list classes/functions involved].
+              Configuration: [relevant settings if any].",
+  "context": "Implementation details for [feature purpose]",
+  "keywords": ["feature", "<feature-name>", "implementation"],
+  "tags": ["feature", "implementation"],
+  "importance": 8,
+  "project_ids": [<project_id>]
+})
+```
+
+### Phase 4 Completion Checkpoint
+
+```
+Phase 4 Complete:
+- Features identified: [count]
+- Feature memories created: [count] (minimum 3 for projects with 3+ features)
+- Feature flows traced: [list]
+- Status: ✅ Met / ⚠️ Fewer than 3 features exist (acceptable)
+```
+
+**Skip only if** project has fewer than 3 distinct features (e.g., single-purpose library).
 
 ---
 
-## Phase 5: Design Decisions (from documentation only)
+## Phase 5: Design Decisions (DOCUMENTATION-ONLY)
 
-**CRITICAL: Only capture explicitly documented decisions.**
+**CRITICAL: This phase is CONDITIONAL. Only capture decisions that are EXPLICITLY documented.**
 
-Search for decision documentation:
+### What Counts as "Documented"
+
+✅ **DO create decision memories for**:
+- ADRs (Architecture Decision Records) in `docs/adr/` or similar
+- README sections titled "Why X", "Rationale", "Design Decisions"
+- Code comments explicitly stating "We chose X because Y"
+- CONTRIBUTING.md or DESIGN.md files explaining choices
+- Commit messages or PR descriptions linked from docs
+
+❌ **DO NOT create decision memories for**:
+- Inferred decisions (e.g., "They use PostgreSQL so they must value ACID")
+- Technology choices without documented rationale
+- Patterns you observe but aren't explained
+- Your assumptions about why something was built a certain way
+- Standard framework conventions (e.g., "FastAPI uses Pydantic")
+
+### Search for Decision Documentation
+
 ```
 mcp__plugin_serena_serena__search_for_pattern({
-  "substring_pattern": "Decision:|Rationale:|## Why|ADR-",
+  "substring_pattern": "Decision:|Rationale:|## Why|ADR-|chose.*because|decided.*to|trade-?off",
   "paths_include_glob": "**/*.md"
 })
 ```
 
-If found, create decision memories. If not, skip this phase.
+Also check:
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "# Why|## Rationale|Design Decision",
+  "paths_include_glob": "**/*.md"
+})
+```
+
+And code comments:
+```
+mcp__plugin_serena_serena__search_for_pattern({
+  "substring_pattern": "# NOTE:.*chose|# DECISION:|# WHY:",
+  "restrict_search_to_code_files": true
+})
+```
+
+### Phase 5 Outcomes
+
+**If documentation found**:
+Create 1 memory per documented decision:
+```
+execute_forgetful_tool("create_memory", {
+  "title": "[Project] - Decision: [Topic]",
+  "content": "Decision: [what was decided].
+              Alternatives considered: [if documented].
+              Rationale: [QUOTE from documentation].
+              Source: [file path and line number].",
+  "context": "Documented design decision from [source file]",
+  "keywords": ["decision", "architecture", "rationale", "<topic>"],
+  "tags": ["decision", "documented"],
+  "importance": 8,
+  "project_ids": [<project_id>]
+})
+```
+
+**If NO documentation found**:
+```
+Phase 5 Complete:
+- Searched: [X] markdown files, [Y] code files
+- Documented decisions found: 0
+- Status: ✅ SKIPPED (no explicit documentation)
+```
+
+**DO NOT** create decision memories based on inference. This pollutes the knowledge base with assumptions.
 
 ---
 
-## Phase 6: Code Artifacts
+## Phase 6: Code Artifacts (MANDATORY, minimum 3)
 
-For reusable patterns discovered via Serena:
+**Purpose**: Store reusable code patterns that enable an agent to understand HOW the codebase works, not just WHAT exists.
+
+**THIS PHASE IS MANDATORY** - Minimum 3 artifacts for any project.
+
+### Why Code Artifacts Matter
+
+Without artifacts, an agent knows components exist but cannot:
+- Write code that integrates with existing patterns
+- Understand implementation details
+- See actual syntax and conventions used
+- Learn project-specific idioms
+
+### Artifact Selection Criteria
+
+Create artifacts for:
+1. **Core patterns** - Most-used patterns from Phase 3 (async generators, factories, etc.)
+2. **Interface contracts** - Base classes/interfaces that define extensibility points
+3. **Entry point examples** - Main handlers, API endpoints, CLI commands
+4. **Utility functions** - Frequently-used helpers
+5. **Configuration patterns** - How config is loaded/used
+
+### Minimum Artifact Requirements
+
+| Project Size | Minimum Artifacts | Recommended |
+|--------------|-------------------|-------------|
+| Small | 3 | 3-5 |
+| Medium | 5 | 5-10 |
+| Large | 8 | 8-15 |
+
+### Extract Code Using Serena
+
+```
+mcp__plugin_serena_serena__find_symbol({
+  "name_path_pattern": "PatternClass/key_method",
+  "include_body": true
+})
+```
+
+### Create Artifacts
+
+For each key pattern/utility:
 ```
 execute_forgetful_tool("create_code_artifact", {
-  "title": "Descriptive name",
-  "description": "What it does and when to use it",
-  "code": "<implementation from find_symbol with include_body=true>",
+  "title": "[Project] - [Pattern Name] ([Language])",
+  "description": "What: [brief description of what it does].
+                  When: [when to use this pattern].
+                  Where: [file location in codebase].
+                  Usage: [how other code uses this].",
+  "code": "<full implementation from find_symbol>",
   "language": "python",
   "tags": ["pattern", "<domain-tag>"],
   "project_id": <project_id>
 })
 ```
+
+### Recommended Artifacts by Project Type
+
+**Web API**:
+1. Request handler pattern (endpoint example)
+2. Middleware/interceptor pattern
+3. Repository/data access pattern
+4. Error handling pattern
+5. Authentication pattern
+
+**CLI Tool**:
+1. Command handler pattern
+2. Argument parsing pattern
+3. Output formatting pattern
+
+**Data Pipeline**:
+1. Async generator/streaming pattern
+2. Batch processing pattern
+3. Transformation/mapping pattern
+4. Error recovery pattern
+
+**Library/SDK**:
+1. Public API entry point
+2. Factory/builder pattern
+3. Configuration pattern
+4. Extension point example
+
+### Phase 6 Completion Checkpoint
+
+```
+Phase 6 Complete:
+- Code artifacts created: [count] (minimum 3)
+- Artifacts by category: [patterns: X, interfaces: Y, utilities: Z]
+- Artifact titles: [list]
+- Status: ✅ Met minimum / ❌ Not met (create more before proceeding)
+```
+
+**DO NOT proceed to Phase 6B until minimum artifact count is met.**
 
 ---
 
@@ -733,18 +1097,46 @@ execute_forgetful_tool("create_memory", {
 
 ## Execution Guidelines
 
-1. **Execute phases in order**: 0 → 1 (with notes) → 1B → 2 → 2B → 3 → 4 → 5 → 6 → 6B → 7 → 7B
-2. **Leverage Serena's strengths**: Symbol analysis over text search
-3. **Track relationships**: find_referencing_symbols is powerful - use it
-4. **Aggregate symbol data**: Collect symbols during Phase 2 for use in Phase 6B
-5. **Deduplicate entities**: Always search before creating
-6. **Use Context7**: Validate framework usage assumptions
-7. **Skip phases** with good existing coverage
+### Phase Execution Order
+
+Execute in order: 0 → 1 → 1B → 2 → **2B** → 3 → 4 → 5 → **6** → 6B → 7 → 7B
+
+### Mandatory Phases (CANNOT SKIP)
+
+| Phase | Minimum Output | Gate |
+|-------|---------------|------|
+| 0: Discovery | Gap analysis report | Report before proceeding |
+| 1: Foundation | 5 memories + project notes | All 5 core memories |
+| 2: Architecture | Layer memories | 1 per architectural layer |
+| **2B: Entities** | **3+ entities** | **Entity count met** |
+| 3: Patterns | **3+ pattern memories** | Pattern count met |
+| **6: Artifacts** | **3+ code artifacts** | **Artifact count met** |
+| 6B: Symbol Index | 1 document + entry memory | Document created |
+| 7B: Architecture Doc | 1 document + entry memory | Document created |
+
+### Conditional Phases
+
+| Phase | Skip Condition |
+|-------|----------------|
+| 1B: Dependencies | Single-file script with no deps |
+| 4: Features | <3 distinct features |
+| 5: Decisions | NO explicit documentation found |
+| 7: Documents | No long-form content needed |
+
+### Execution Rules
+
+1. **Report after each phase** - Use the completion checkpoint format
+2. **Meet minimums before proceeding** - DO NOT skip mandatory phases
+3. **Leverage Serena's strengths** - Symbol analysis over text search
+4. **Track relationships** - find_referencing_symbols is powerful
+5. **Aggregate symbol data** - Collect during Phase 2 for Phase 6B
+6. **Deduplicate entities** - Always search before creating
+7. **Use Context7** - Validate framework usage assumptions
 8. **Update outdated memories** as discovered
-9. **Link new memories** to existing related memories
-10. **Link entities to memories**: Enable bidirectional discovery
-11. **Create entry memories**: Always link documents via document_ids in entry memories
-12. **Mark obsolete** memories that reference removed code
+9. **Link entities to memories** - Enable bidirectional discovery
+10. **Create entry memories** - Link documents via document_ids
+11. **Mark obsolete** - Memories that reference removed code
+12. **Phase 5 is documentation-only** - Never infer decisions from code
 
 ## Quality Principles
 
@@ -848,10 +1240,69 @@ Test with architecture questions - Serena-encoded repos should answer accurately
 
 ## Report Progress
 
-After each phase:
-- Symbols analyzed
-- Memories created/updated
-- Relationships discovered
-- Gaps remaining
+After each phase, report using the checkpoint format:
+```
+Phase [N] Complete:
+- Created: [X] memories, [Y] entities, [Z] artifacts
+- Minimum required: [targets from table]
+- Status: ✅ Met / ❌ Not met
+```
 
 Ask user to confirm before proceeding.
+
+---
+
+## Final Encoding Summary
+
+When encoding is complete, provide a summary in this format:
+
+```
+# [Project] Encoding Complete
+
+## Artifacts Created
+
+| Type | Count | Minimum | Status |
+|------|-------|---------|--------|
+| Memories | [X] | [per profile] | ✅/❌ |
+| Entities | [Y] | 3+ | ✅/❌ |
+| Relationships | [Z] | - | - |
+| Code Artifacts | [W] | 3+ | ✅/❌ |
+| Documents | [V] | 2 | ✅/❌ |
+
+## Phase Completion Status
+
+| Phase | Status | Output |
+|-------|--------|--------|
+| 0: Discovery | ✅ | Gap analysis completed |
+| 1: Foundation | ✅ | [X] memories |
+| 1B: Dependencies | ✅/SKIP | [reason] |
+| 2: Architecture | ✅ | [X] layer memories |
+| 2B: Entities | ✅ | [X] entities, [Y] relationships |
+| 3: Patterns | ✅ | [X] pattern memories |
+| 4: Features | ✅/SKIP | [X] feature memories |
+| 5: Decisions | ✅/SKIP | [X] decisions (or: no documentation found) |
+| 6: Artifacts | ✅ | [X] code artifacts |
+| 6B: Symbol Index | ✅ | Document + entry memory |
+| 7B: Architecture | ✅ | Document + entry memory |
+
+## Key Memories for Navigation
+
+1. **Overview**: [title] (ID: X)
+2. **Architecture**: [title] (ID: Y)
+3. **Symbol Index**: [title] (ID: Z, links to doc)
+4. **Architecture Doc**: [title] (ID: W, links to doc)
+
+## Entity Graph Summary
+
+Components: [list]
+Frameworks: [list]
+Key relationships: [list]
+
+## Validation Queries Tested
+
+- "How do I add a new endpoint?" → [result summary]
+- "What patterns are used?" → [result summary]
+- "What components exist?" → [entity count returned]
+```
+
+This summary confirms the encoding meets minimum requirements and provides quick navigation for future agents.
