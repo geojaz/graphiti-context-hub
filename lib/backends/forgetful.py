@@ -16,15 +16,14 @@ class ForgetfulBackend(Backend):
         """Search memories using Forgetful query_memory."""
         project_id = self._group_to_project_id(group_id)
 
-        # Future implementation:
-        # result = mcp__forgetful__execute_forgetful_tool("query_memory", {
-        #     "query": query,
-        #     "project_ids": [project_id] if project_id else None,
-        #     "k": limit
-        # })
-        # return self._parse_forgetful_memories(result)
+        result = mcp__forgetful__execute_forgetful_tool("query_memory", {
+            "query": query,
+            "project_ids": [project_id] if project_id else None,
+            "k": limit,
+            "include_links": True
+        })
 
-        return []
+        return self._parse_forgetful_memories(result)
 
     def search_facts(self, query: str, group_id: str, limit: int) -> List[Relationship]:
         """
@@ -53,18 +52,17 @@ class ForgetfulBackend(Backend):
         """Save memory using Forgetful create_memory."""
         project_id = self._group_to_project_id(group_id)
 
-        # Future implementation:
-        # result = mcp__forgetful__execute_forgetful_tool("create_memory", {
-        #     "title": metadata.get("title", "Untitled"),
-        #     "content": content,
-        #     "importance": metadata.get("importance", 5),
-        #     "project_ids": [project_id] if project_id else [],
-        #     "keywords": metadata.get("keywords", []),
-        #     "tags": metadata.get("tags", []),
-        # })
-        # return str(result.get("memory_id", ""))
+        result = mcp__forgetful__execute_forgetful_tool("create_memory", {
+            "title": metadata.get("title", "Untitled"),
+            "content": content,
+            "importance": metadata.get("importance", 5),
+            "project_ids": [project_id] if project_id else [],
+            "keywords": metadata.get("keywords", []),
+            "tags": metadata.get("tags", []),
+            "context": metadata.get("context", "")
+        })
 
-        return "stub-memory-id"
+        return str(result.get("memory_id", result.get("id", "unknown")))
 
     def explore(self, starting_point: str, group_id: str, depth: int) -> KnowledgeGraph:
         """Explore by following linked_memory_ids."""
@@ -111,26 +109,23 @@ class ForgetfulBackend(Backend):
         """List recent memories using list_memories."""
         project_id = self._group_to_project_id(group_id)
 
-        # Future implementation:
-        # result = mcp__forgetful__execute_forgetful_tool("list_memories", {
-        #     "project_ids": [project_id] if project_id else None,
-        #     "limit": limit,
-        #     "sort_by": "created_at",
-        #     "sort_order": "desc"
-        # })
-        # return self._parse_forgetful_memories(result)
+        result = mcp__forgetful__execute_forgetful_tool("list_memories", {
+            "project_ids": [project_id] if project_id else None,
+            "limit": limit,
+            "sort_by": "created_at",
+            "sort_order": "desc"
+        })
 
-        return []
+        return self._parse_forgetful_memories(result)
 
     # Dynamic discovery
 
     def get_capabilities(self) -> List[OperationInfo]:
         """Discover capabilities using Forgetful's meta-tools."""
-        # Future implementation:
-        # tools = mcp__forgetful__discover_forgetful_tools()
-        # return self._map_forgetful_tools_to_operations(tools)
+        tools = mcp__forgetful__discover_forgetful_tools()
 
-        # Static fallback
+        # Map Forgetful tools to our operations
+        # For now, return static list (full mapping can be done later)
         return [
             OperationInfo(
                 name="query",
@@ -143,6 +138,12 @@ class ForgetfulBackend(Backend):
                 description="Save new memory",
                 params={"content": "str", "title": "str", "importance": "int (1-10)"},
                 example='memory.save("Decision: JWT auth", title="Auth", importance=9)'
+            ),
+            OperationInfo(
+                name="list_recent",
+                description="List recent memories",
+                params={"limit": "int"},
+                example='memory.list_recent(limit=20)'
             ),
         ]
 
@@ -174,26 +175,24 @@ class ForgetfulBackend(Backend):
         if group_id in self._project_cache:
             return self._project_cache[group_id]
 
-        # Future implementation:
-        # projects = mcp__forgetful__execute_forgetful_tool("list_projects", {})
-        #
-        # for project in projects.get("projects", []):
-        #     if project.get("name") == group_id:
-        #         project_id = project.get("id")
-        #         self._project_cache[group_id] = project_id
-        #         return project_id
-        #
-        # # Create new project
-        # result = mcp__forgetful__execute_forgetful_tool("create_project", {
-        #     "name": group_id,
-        #     "description": f"Auto-created from group_id: {group_id}"
-        # })
-        # project_id = result.get("project_id")
-        # self._project_cache[group_id] = project_id
-        # return project_id
+        # List and find
+        result = mcp__forgetful__execute_forgetful_tool("list_projects", {})
 
-        # Stub for now
-        return 1
+        for project in result.get("projects", []):
+            if project.get("name") == group_id:
+                project_id = project.get("id")
+                self._project_cache[group_id] = project_id
+                return project_id
+
+        # Create new project
+        create_result = mcp__forgetful__execute_forgetful_tool("create_project", {
+            "name": group_id,
+            "description": f"Auto-created from group_id: {group_id}"
+        })
+
+        project_id = create_result.get("project_id", create_result.get("id"))
+        self._project_cache[group_id] = project_id
+        return project_id
 
     def _parse_forgetful_memories(self, result: dict) -> List[Memory]:
         """Parse Forgetful memory format to Memory objects."""
