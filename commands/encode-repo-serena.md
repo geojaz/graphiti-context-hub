@@ -1,11 +1,11 @@
 # Encode Repository (Serena-Enhanced)
 
-Systematically populate the Forgetful knowledge base using Serena's LSP-powered symbol analysis for accurate, comprehensive codebase understanding.
+Systematically populate the knowledge base using Serena's LSP-powered symbol analysis for accurate, comprehensive codebase understanding.
 
 ## Purpose
 
 Transform an undocumented or lightly-documented codebase into a rich, searchable knowledge repository. Use this when:
-- Starting to use Forgetful for an existing project
+- Starting to use the memory system for an existing project
 - Onboarding a new project into the memory system
 - Preparing a project for AI agent collaboration
 - Creating institutional knowledge for team members
@@ -37,12 +37,19 @@ Install it with:
 Then re-run /encode-repo-serena
 ```
 
-Also verify Forgetful MCP is connected by testing:
-```
-execute_forgetful_tool("list_projects", {})
+Also verify memory backend is connected by testing:
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_get_config
+
+config = memory_get_config()
+print(f"Backend: {config['backend']}, Group: {config['group_id']}")
 ```
 
-If Forgetful errors, run `/context-hub-setup` first.
+If this errors, run `/context-hub-setup` first.
 
 ## Arguments
 
@@ -131,20 +138,23 @@ mcp__plugin_serena_serena__list_dir({
 })
 ```
 
-### Step 3: Check Existing Forgetful Coverage
+### Step 3: Check Existing Memory Coverage
 
-```
-execute_forgetful_tool("list_projects", {})
-```
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
 
-If project exists, query existing memories:
-```
-execute_forgetful_tool("query_memory", {
-  "query": "<project-name> architecture",
-  "query_context": "Assessing KB coverage before Serena bootstrap",
-  "k": 10,
-  "project_ids": [<project_id>]
-})
+from bridge import memory_query, memory_get_config
+
+config = memory_get_config()
+print(f"Backend: {config['backend']}, Group: {config['group_id']}\n")
+
+# Query existing memories
+results = memory_query("architecture patterns", limit=10)
+print(f"Found {len(results)} existing memories")
+for r in results:
+    print(f"  - {r['metadata'].get('title', 'Untitled')}")
 ```
 
 ### Step 4: Analyze Entry Points
@@ -169,33 +179,57 @@ Report findings before proceeding.
 
 ## Phase 1: Project Foundation (5-10 memories)
 
-### Create/Update Project in Forgetful
+### Memory Adapter Setup
 
-If project doesn't exist:
-```
-execute_forgetful_tool("create_project", {
-  "name": "owner/repo-name",
-  "description": "<problem solved, features, tech stack>",
-  "project_type": "development",
-  "repo_name": "owner/repo"
-})
-```
+The memory adapter auto-detects the group_id from the git repo. For advanced Forgetful features (projects, entities, documents), you'll need the project_id:
 
-### Update Project Notes
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
 
-After project creation (or if notes are empty), populate with high-level overview:
-```
-execute_forgetful_tool("update_project", {
-  "project_id": <id>,
-  "notes": "Entry: python3 -m ProjectName.main <mode>
+from bridge import memory_get_config
+
+config = memory_get_config()
+group_id = config['group_id']
+print(f"Group ID: {group_id}")
+
+# For Forgetful backend only: Get or create project
+if config['backend'] == 'forgetful':
+    result = execute_forgetful_tool("list_projects", {})
+
+    # Find or create project
+    project_id = None
+    for project in result.get("projects", []):
+        if project.get("name") == group_id:
+            project_id = project.get("id")
+            break
+
+    if not project_id:
+        create_result = execute_forgetful_tool("create_project", {
+            "name": group_id,
+            "description": "<problem solved, features, tech stack>",
+            "project_type": "development",
+            "repo_name": group_id
+        })
+        project_id = create_result.get("project_id", create_result.get("id"))
+
+    # Update project notes (Forgetful-specific feature)
+    execute_forgetful_tool("update_project", {
+        "project_id": project_id,
+        "notes": "Entry: python3 -m ProjectName.main <mode>
 Tech: Python 3.12, ClickHouse, XGBoost, FastAPI, Streamlit
 Architecture: 6-layer (Data→Domain→Processing→ML→Strategy→Presentation)
 Key patterns: Repository, Async generators, Batch writes, Factory
 Core components: ConnectionPool, Fetchers, Writers, ML Pipeline"
-})
+    })
+
+    print(f"Project ID: {project_id}")
+else:
+    print("Graphiti backend - using group_id directly")
 ```
 
-**Notes format guidance** (500-1000 chars max):
+**Notes format guidance** (500-1000 chars max, Forgetful only):
 - Entry point command
 - Tech stack summary (language, major frameworks, database)
 - Architecture pattern (layer count, pattern name)
@@ -206,11 +240,60 @@ This provides instant context without querying memories.
 
 ### Create Foundation Memories
 
-1. **Project Overview** (Importance: 10)
-2. **Technology Stack** (Importance: 9)
-3. **Architecture Pattern** (Importance: 10)
-4. **Development Setup** (Importance: 8)
-5. **Testing Strategy** (Importance: 8)
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_save
+
+# 1. Project Overview
+memory_save(
+    content="[Project purpose, what problems it solves, main features]",
+    title="Project Overview",
+    importance=10,
+    keywords=["overview", "purpose"],
+    tags=["foundation"]
+)
+
+# 2. Technology Stack
+memory_save(
+    content="Language: Python 3.12. Frameworks: FastAPI, Streamlit. Database: ClickHouse. ML: XGBoost.",
+    title="Technology Stack",
+    importance=9,
+    keywords=["tech-stack", "dependencies"],
+    tags=["foundation", "technology"]
+)
+
+# 3. Architecture Pattern
+memory_save(
+    content="6-layer architecture: Data→Domain→Processing→ML→Strategy→Presentation",
+    title="Architecture Pattern",
+    importance=10,
+    keywords=["architecture", "layers"],
+    tags=["foundation", "architecture"]
+)
+
+# 4. Development Setup
+memory_save(
+    content="[Setup instructions, environment requirements, how to run]",
+    title="Development Setup",
+    importance=8,
+    keywords=["setup", "development"],
+    tags=["foundation"]
+)
+
+# 5. Testing Strategy
+memory_save(
+    content="[Testing approach, frameworks used, how to run tests]",
+    title="Testing Strategy",
+    importance=8,
+    keywords=["testing", "qa"],
+    tags=["foundation"]
+)
+
+print("✅ Created 5 foundation memories")
+```
 
 ---
 
@@ -268,19 +351,24 @@ Use Context7 to confirm:
 
 ### Step 4: Create Dependency Memory
 
-```
-execute_forgetful_tool("create_memory", {
-  "title": "[Project] - Dependencies and External Libraries",
-  "content": "Language: [lang] [version]. Core frameworks: [list with roles].
-              Data/storage: [databases]. HTTP/API: [frameworks].
-              Dev tools: [testing, linting, build].
-              Rationale: [why chosen, if documented].",
-  "context": "Understanding technology choices and integration patterns",
-  "keywords": ["tech-stack", "dependencies", "frameworks", "libraries"],
-  "tags": ["technology", "foundation", "dependencies"],
-  "importance": 9,
-  "project_ids": [<project_id>]
-})
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_save
+
+memory_save(
+    content="""Language: [lang] [version]. Core frameworks: [list with roles].
+Data/storage: [databases]. HTTP/API: [frameworks].
+Dev tools: [testing, linting, build].
+Rationale: [why chosen, if documented].""",
+    title="[Project] - Dependencies and External Libraries",
+    context="Understanding technology choices and integration patterns",
+    keywords=["tech-stack", "dependencies", "frameworks", "libraries"],
+    tags=["technology", "foundation", "dependencies"],
+    importance=9
+)
 ```
 
 ---
@@ -330,14 +418,21 @@ This reveals:
 ### Step 4: Create Architecture Memories
 
 For each architectural layer discovered:
-```
-{
-  "title": "[Project] - [Layer] Architecture",
-  "content": "Key symbols: [list]. Relationships: [discovered references]. Pattern: [identified pattern].",
-  "context": "Discovered via Serena symbol analysis",
-  "importance": 8,
-  "tags": ["architecture"]
-}
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_save
+
+memory_save(
+    content="Key symbols: [list]. Relationships: [discovered references]. Pattern: [identified pattern].",
+    title="[Project] - [Layer] Architecture",
+    context="Discovered via Serena symbol analysis",
+    importance=8,
+    keywords=["architecture", "layer-name"],
+    tags=["architecture"]
+)
 ```
 
 ---
@@ -404,51 +499,56 @@ Only create entities for **major components**:
 - Tag by role: `library`, `service`, `component`, `database`, `framework`, `tool`
 - Tag by domain if relevant: `auth`, `api`, `storage`, `ui`, `config`
 
-### Step 1: Create Entities for Major Components
+**NOTE: Entity graph features are currently only available in Forgetful backend.**
+
+### Step 1: Create Entities for Major Components (Forgetful Only)
 
 For each major component discovered via Serena:
-```
-execute_forgetful_tool("create_entity", {
-  "name": "AuthenticationService",
-  "entity_type": "other",
-  "custom_type": "Service",
-  "notes": "Centralized auth service. Location: src/services/auth.py.
-            Handles token validation, user context injection.",
-  "tags": ["service", "auth"],
-  "aka": ["AuthService", "auth", "auth_service"],
-  "project_ids": [<project_id>]
-})
+```python
+# Only if using Forgetful backend
+if config['backend'] == 'forgetful':
+    execute_forgetful_tool("create_entity", {
+        "name": "AuthenticationService",
+        "entity_type": "other",
+        "custom_type": "Service",
+        "notes": "Centralized auth service. Location: src/services/auth.py. Handles token validation, user context injection.",
+        "tags": ["service", "auth"],
+        "aka": ["AuthService", "auth", "auth_service"],
+        "project_ids": [project_id]
+    })
 ```
 
-### Step 2: Create Entities for Key Dependencies
+### Step 2: Create Entities for Key Dependencies (Forgetful Only)
 
 For external libraries central to the project:
-```
-execute_forgetful_tool("create_entity", {
-  "name": "FastAPI",
-  "entity_type": "other",
-  "custom_type": "Framework",
-  "notes": "Python async web framework. Used for REST API and WebSocket endpoints.",
-  "tags": ["framework", "api"],
-  "aka": ["fastapi", "fast-api", "fast_api"],
-  "project_ids": [<project_id>]
-})
+```python
+if config['backend'] == 'forgetful':
+    execute_forgetful_tool("create_entity", {
+        "name": "FastAPI",
+        "entity_type": "other",
+        "custom_type": "Framework",
+        "notes": "Python async web framework. Used for REST API and WebSocket endpoints.",
+        "tags": ["framework", "api"],
+        "aka": ["fastapi", "fast-api", "fast_api"],
+        "project_ids": [project_id]
+    })
 ```
 
-### Step 3: Create Relationships
+### Step 3: Create Relationships (Forgetful Only)
 
 Map how components connect using reference counts from Serena:
-```
-execute_forgetful_tool("create_entity_relationship", {
-  "source_entity_id": <project_or_component_id>,
-  "target_entity_id": <library_id>,
-  "relationship_type": "uses",
-  "strength": 1.0,
-  "metadata": {
-    "version": "0.104.1",
-    "role": "HTTP framework and routing"
-  }
-})
+```python
+if config['backend'] == 'forgetful':
+    execute_forgetful_tool("create_entity_relationship", {
+        "source_entity_id": component_entity_id,
+        "target_entity_id": library_id,
+        "relationship_type": "uses",
+        "strength": 1.0,
+        "metadata": {
+            "version": "0.104.1",
+            "role": "HTTP framework and routing"
+        }
+    })
 ```
 
 **Relationship types**:
@@ -464,19 +564,22 @@ execute_forgetful_tool("create_entity_relationship", {
 - Normalize to 0.0-1.0 scale within project
 - Higher reference count = higher strength
 
-### Step 4: Link Entities to Memories
+### Step 4: Link Entities to Memories (Forgetful Only)
 
 Connect entities to their architecture memories:
-```
-execute_forgetful_tool("link_entity_to_memory", {
-  "entity_id": <component_entity_id>,
-  "memory_id": <architecture_memory_id>
-})
+```python
+if config['backend'] == 'forgetful':
+    execute_forgetful_tool("link_entity_to_memory", {
+        "entity_id": component_entity_id,
+        "memory_id": architecture_memory_id
+    })
 ```
 
 This enables bidirectional discovery:
 - Find entity → get related memories
 - Query memories → discover linked entities
+
+**For Graphiti backend**: Entity extraction is automatic during memory save. No explicit entity creation needed.
 
 ### Phase 2B Completion Checkpoint
 
@@ -586,19 +689,24 @@ mcp__plugin_serena_serena__find_referencing_symbols({
 ### Create Pattern Memories
 
 For each significant pattern (used 3+ times):
-```
-execute_forgetful_tool("create_memory", {
-  "title": "[Project] - [Pattern Name] Pattern",
-  "content": "Pattern: [name]. Used for: [purpose].
-              Locations: [list files/classes using it].
-              Implementation: [brief description of how it works].
-              Usage count: [X] occurrences across codebase.",
-  "context": "Recurring implementation pattern for [purpose]",
-  "keywords": ["pattern", "<pattern-name>", "<domain>"],
-  "tags": ["pattern", "implementation"],
-  "importance": 7,
-  "project_ids": [<project_id>]
-})
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_save
+
+memory_save(
+    content="""Pattern: [name]. Used for: [purpose].
+Locations: [list files/classes using it].
+Implementation: [brief description of how it works].
+Usage count: [X] occurrences across codebase.""",
+    title="[Project] - [Pattern Name] Pattern",
+    context="Recurring implementation pattern for [purpose]",
+    keywords=["pattern", "<pattern-name>", "<domain>"],
+    tags=["pattern", "implementation"],
+    importance=7
+)
 ```
 
 ### Phase 3 Completion Checkpoint
@@ -679,20 +787,25 @@ mcp__plugin_serena_serena__find_referencing_symbols({
 ### Create Feature Memories
 
 For each major feature:
-```
-execute_forgetful_tool("create_memory", {
-  "title": "[Project] - [Feature Name] Implementation",
-  "content": "Feature: [user-facing description].
-              Entry point: [file:function].
-              Flow: [step-by-step through components].
-              Key components: [list classes/functions involved].
-              Configuration: [relevant settings if any].",
-  "context": "Implementation details for [feature purpose]",
-  "keywords": ["feature", "<feature-name>", "implementation"],
-  "tags": ["feature", "implementation"],
-  "importance": 8,
-  "project_ids": [<project_id>]
-})
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_save
+
+memory_save(
+    content="""Feature: [user-facing description].
+Entry point: [file:function].
+Flow: [step-by-step through components].
+Key components: [list classes/functions involved].
+Configuration: [relevant settings if any].""",
+    title="[Project] - [Feature Name] Implementation",
+    context="Implementation details for [feature purpose]",
+    keywords=["feature", "<feature-name>", "implementation"],
+    tags=["feature", "implementation"],
+    importance=8
+)
 ```
 
 ### Phase 4 Completion Checkpoint
@@ -758,19 +871,24 @@ mcp__plugin_serena_serena__search_for_pattern({
 
 **If documentation found**:
 Create 1 memory per documented decision:
-```
-execute_forgetful_tool("create_memory", {
-  "title": "[Project] - Decision: [Topic]",
-  "content": "Decision: [what was decided].
-              Alternatives considered: [if documented].
-              Rationale: [QUOTE from documentation].
-              Source: [file path and line number].",
-  "context": "Documented design decision from [source file]",
-  "keywords": ["decision", "architecture", "rationale", "<topic>"],
-  "tags": ["decision", "documented"],
-  "importance": 8,
-  "project_ids": [<project_id>]
-})
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_save
+
+memory_save(
+    content="""Decision: [what was decided].
+Alternatives considered: [if documented].
+Rationale: [QUOTE from documentation].
+Source: [file path and line number].""",
+    title="[Project] - Decision: [Topic]",
+    context="Documented design decision from [source file]",
+    keywords=["decision", "architecture", "rationale", "<topic>"],
+    tags=["decision", "documented"],
+    importance=8
+)
 ```
 
 **If NO documentation found**:
@@ -825,21 +943,42 @@ mcp__plugin_serena_serena__find_symbol({
 })
 ```
 
-### Create Artifacts
+### Create Artifacts (Forgetful Only)
+
+**NOTE: Code artifacts are a Forgetful-specific feature.**
 
 For each key pattern/utility:
-```
-execute_forgetful_tool("create_code_artifact", {
-  "title": "[Project] - [Pattern Name] ([Language])",
-  "description": "What: [brief description of what it does].
-                  When: [when to use this pattern].
-                  Where: [file location in codebase].
-                  Usage: [how other code uses this].",
-  "code": "<full implementation from find_symbol>",
-  "language": "python",
-  "tags": ["pattern", "<domain-tag>"],
-  "project_id": <project_id>
-})
+```python
+if config['backend'] == 'forgetful':
+    execute_forgetful_tool("create_code_artifact", {
+        "title": "[Project] - [Pattern Name] ([Language])",
+        "description": """What: [brief description of what it does].
+When: [when to use this pattern].
+Where: [file location in codebase].
+Usage: [how other code uses this].""",
+        "code": "<full implementation from find_symbol>",
+        "language": "python",
+        "tags": ["pattern", "<domain-tag>"],
+        "project_id": project_id
+    })
+else:
+    # For Graphiti, save as regular memory with code
+    memory_save(
+        content=f"""# [Pattern Name] ([Language])
+
+What: [brief description of what it does].
+When: [when to use this pattern].
+Where: [file location in codebase].
+Usage: [how other code uses this].
+
+```python
+<full implementation from find_symbol>
+```""",
+        title="[Project] - [Pattern Name] Code Example",
+        keywords=["code", "pattern", "example"],
+        tags=["pattern", "code"],
+        importance=7
+    )
 ```
 
 ### Recommended Artifacts by Project Type
@@ -896,17 +1035,29 @@ Collect from all `get_symbols_overview` and `find_symbol` calls during Phase 2:
 - Key functions with callers (from `find_referencing_symbols`)
 - Reference counts for each symbol
 
-### Step 2: Create Symbol Index Document
+### Step 2: Create Symbol Index Document (Forgetful Only)
 
-```
-execute_forgetful_tool("create_document", {
-  "title": "[Project] - Symbol Index",
-  "description": "LSP-accurate symbol listing with locations, relationships, and reference counts. Generated via Serena analysis.",
-  "content": "<structured markdown table - see format below>",
-  "document_type": "markdown",
-  "project_id": <id>,
-  "tags": ["symbol-index", "reference", "navigation"]
-})
+**NOTE: Documents are a Forgetful-specific feature.**
+
+```python
+if config['backend'] == 'forgetful':
+    execute_forgetful_tool("create_document", {
+        "title": "[Project] - Symbol Index",
+        "description": "LSP-accurate symbol listing with locations, relationships, and reference counts. Generated via Serena analysis.",
+        "content": "<structured markdown table - see format below>",
+        "document_type": "markdown",
+        "project_id": project_id,
+        "tags": ["symbol-index", "reference", "navigation"]
+    })
+else:
+    # For Graphiti, save as long-form memory
+    memory_save(
+        content="<structured markdown table>",
+        title="[Project] - Symbol Index",
+        keywords=["symbols", "index", "navigation"],
+        tags=["symbol-index", "reference"],
+        importance=8
+    )
 ```
 
 **Document Format:**
@@ -940,21 +1091,41 @@ Total: X classes, Y interfaces, Z functions
 
 ### Step 3: Create Entry Memory
 
-Create an atomic memory that summarizes the index and links to the document:
-```
-execute_forgetful_tool("create_memory", {
-  "title": "[Project] - Symbol Index Reference",
-  "content": "Symbol index contains X classes, Y interfaces, Z functions.
-              Top referenced: [list top 5 by ref count].
-              Key interfaces: [list with implementation counts].
-              Full index in linked document.",
-  "context": "Entry point for symbol navigation - links to full index document",
-  "keywords": ["symbols", "classes", "functions", "navigation", "index"],
-  "tags": ["reference", "navigation", "symbol-index"],
-  "importance": 8,
-  "project_ids": [<id>],
-  "document_ids": [<symbol_index_doc_id>]
-})
+Create an atomic memory that summarizes the index:
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_save
+
+if config['backend'] == 'forgetful':
+    # Link to document
+    execute_forgetful_tool("create_memory", {
+        "title": "[Project] - Symbol Index Reference",
+        "content": """Symbol index contains X classes, Y interfaces, Z functions.
+Top referenced: [list top 5 by ref count].
+Key interfaces: [list with implementation counts].
+Full index in linked document.""",
+        "context": "Entry point for symbol navigation - links to full index document",
+        "keywords": ["symbols", "classes", "functions", "navigation", "index"],
+        "tags": ["reference", "navigation", "symbol-index"],
+        "importance": 8,
+        "project_ids": [project_id],
+        "document_ids": [symbol_index_doc_id]
+    })
+else:
+    # For Graphiti, single memory with all info
+    memory_save(
+        content="""Symbol index contains X classes, Y interfaces, Z functions.
+Top referenced: [list top 5 by ref count].
+Key interfaces: [list with implementation counts].""",
+        title="[Project] - Symbol Index Reference",
+        context="Entry point for symbol navigation",
+        keywords=["symbols", "classes", "functions", "navigation", "index"],
+        tags=["reference", "navigation", "symbol-index"],
+        importance=8
+    )
 ```
 
 ### Size Guidelines
@@ -974,18 +1145,30 @@ execute_forgetful_tool("create_memory", {
 
 ## Phase 7: Documents (as needed)
 
-For content >400 words (detailed guides, comprehensive analysis):
-```
-execute_forgetful_tool("create_document", {
-  "title": "Document name",
-  "description": "Overview and purpose",
-  "content": "<full documentation>",
-  "document_type": "markdown",
-  "project_id": <project_id>
-})
-```
+**NOTE: Documents are a Forgetful-specific feature.**
 
-Create 3-5 atomic memories as entry points, linked via `document_ids`.
+For content >400 words (detailed guides, comprehensive analysis):
+```python
+if config['backend'] == 'forgetful':
+    execute_forgetful_tool("create_document", {
+        "title": "Document name",
+        "description": "Overview and purpose",
+        "content": "<full documentation>",
+        "document_type": "markdown",
+        "project_id": project_id
+    })
+
+    # Create 3-5 atomic memories as entry points, linked via document_ids
+else:
+    # For Graphiti, save as long-form memory
+    memory_save(
+        content="<full documentation>",
+        title="Document name",
+        keywords=["documentation", "guide"],
+        tags=["reference"],
+        importance=8
+    )
+```
 
 ---
 
@@ -1005,15 +1188,25 @@ Combine insights from:
 
 ### Step 2: Create Architecture Document
 
-```
-execute_forgetful_tool("create_document", {
-  "title": "[Project] - Architecture Reference",
-  "description": "Comprehensive architecture documentation with layer details, component relationships, and design patterns. Generated via Serena symbol analysis.",
-  "content": "<structured architecture doc - see format below>",
-  "document_type": "markdown",
-  "project_id": <id>,
-  "tags": ["architecture", "reference", "design"]
-})
+```python
+if config['backend'] == 'forgetful':
+    execute_forgetful_tool("create_document", {
+        "title": "[Project] - Architecture Reference",
+        "description": "Comprehensive architecture documentation with layer details, component relationships, and design patterns. Generated via Serena symbol analysis.",
+        "content": "<structured architecture doc - see format below>",
+        "document_type": "markdown",
+        "project_id": project_id,
+        "tags": ["architecture", "reference", "design"]
+    })
+else:
+    # For Graphiti, save as memory
+    memory_save(
+        content="<structured architecture doc>",
+        title="[Project] - Architecture Reference",
+        keywords=["architecture", "reference", "design"],
+        tags=["architecture", "reference"],
+        importance=9
+    )
 ```
 
 **Document Format:**
@@ -1068,21 +1261,41 @@ Generated: [date]
 
 ### Step 3: Create Entry Memory
 
-Create an atomic memory that summarizes and links to the document:
-```
-execute_forgetful_tool("create_memory", {
-  "title": "[Project] - Architecture Reference",
-  "content": "[Layer count]-layer architecture: [list layers].
-              Key patterns: [top 4-5 patterns].
-              Core components: [top 5 by reference count].
-              Full reference in linked document.",
-  "context": "Entry point for architecture deep-dives - links to comprehensive document",
-  "keywords": ["architecture", "layers", "patterns", "design", "structure"],
-  "tags": ["architecture", "reference", "foundation"],
-  "importance": 9,
-  "project_ids": [<id>],
-  "document_ids": [<arch_doc_id>]
-})
+Create an atomic memory that summarizes the architecture:
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_save
+
+if config['backend'] == 'forgetful':
+    # Link to document
+    execute_forgetful_tool("create_memory", {
+        "title": "[Project] - Architecture Reference",
+        "content": """[Layer count]-layer architecture: [list layers].
+Key patterns: [top 4-5 patterns].
+Core components: [top 5 by reference count].
+Full reference in linked document.""",
+        "context": "Entry point for architecture deep-dives - links to comprehensive document",
+        "keywords": ["architecture", "layers", "patterns", "design", "structure"],
+        "tags": ["architecture", "reference", "foundation"],
+        "importance": 9,
+        "project_ids": [project_id],
+        "document_ids": [arch_doc_id]
+    })
+else:
+    # For Graphiti, single comprehensive memory
+    memory_save(
+        content="""[Layer count]-layer architecture: [list layers].
+Key patterns: [top 4-5 patterns].
+Core components: [top 5 by reference count].""",
+        title="[Project] - Architecture Reference",
+        context="Entry point for architecture deep-dives",
+        keywords=["architecture", "layers", "patterns", "design", "structure"],
+        tags=["architecture", "reference", "foundation"],
+        importance=9
+    )
 ```
 
 ### Size Guidelines
@@ -1156,83 +1369,72 @@ Execute in order: 0 → 1 → 1B → 2 → **2B** → 3 → 4 → 5 → **6** �
 After completion, verify coverage:
 
 ### Test Memories
-```
-execute_forgetful_tool("query_memory", {
-  "query": "How do I add a new API endpoint?",
-  "query_context": "Testing Serena bootstrap coverage",
-  "project_ids": [<project_id>]
-})
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_query
+
+# Test basic queries
+results = memory_query("How do I add a new API endpoint?", limit=5)
+print(f"Found {len(results)} results for endpoint query")
+
+results = memory_query("What dependencies does this project use?", limit=5)
+print(f"Found {len(results)} results for dependency query")
+
+results = memory_query("architecture patterns", limit=10)
+print(f"Found {len(results)} architecture memories")
 ```
 
-### Test Dependencies
-```
-execute_forgetful_tool("query_memory", {
-  "query": "What dependencies does this project use?",
-  "query_context": "Validating dependency encoding",
-  "project_ids": [<project_id>]
-})
+### Test Entities (Forgetful Only)
+```python
+if config['backend'] == 'forgetful':
+    # Test entity listing
+    result = execute_forgetful_tool("list_entities", {
+        "project_ids": [project_id]
+    })
+    print(f"Found {len(result.get('entities', []))} entities")
+
+    # Test by role
+    result = execute_forgetful_tool("list_entities", {
+        "project_ids": [project_id],
+        "tags": ["library"]
+    })
+    print(f"Found {len(result.get('entities', []))} library entities")
+
+    # Test relationships
+    result = execute_forgetful_tool("get_entity_relationships", {
+        "entity_id": component_entity_id,
+        "direction": "outgoing"
+    })
+    print(f"Found {len(result.get('relationships', []))} relationships")
 ```
 
-### Test Entities (scoped by project)
-```
-execute_forgetful_tool("list_entities", {
-  "project_ids": [<project_id>]
-})
-```
+### Test Documents (Forgetful Only)
+```python
+if config['backend'] == 'forgetful':
+    result = execute_forgetful_tool("list_documents", {
+        "project_id": project_id
+    })
+    print(f"Found {len(result.get('documents', []))} documents")
 
-### Test Entities by Role
-```
-execute_forgetful_tool("list_entities", {
-  "project_ids": [<project_id>],
-  "tags": ["library"]
-})
-```
+    # Should show Symbol Index and Architecture Reference
+    for doc in result.get('documents', []):
+        print(f"  - {doc.get('title')}")
 
-### Test Relationships
-```
-execute_forgetful_tool("get_entity_relationships", {
-  "entity_id": <component_entity_id>,
-  "direction": "outgoing"
-})
-```
+    # Test document retrieval
+    result = execute_forgetful_tool("get_document", {
+        "document_id": symbol_index_doc_id
+    })
+    print("Symbol index document retrieved successfully")
 
-### Test Documents
+    # Test project notes
+    result = execute_forgetful_tool("get_project", {
+        "project_id": project_id
+    })
+    print(f"Project notes: {result.get('notes', 'N/A')[:100]}...")
 ```
-execute_forgetful_tool("list_documents", {
-  "project_id": <project_id>
-})
-```
-
-Should show Symbol Index and Architecture Reference documents.
-
-### Test Document Retrieval
-```
-execute_forgetful_tool("get_document", {
-  "document_id": <symbol_index_doc_id>
-})
-```
-
-Verify symbol table is structured and contains accurate locations.
-
-### Test Entry Memory Links
-```
-execute_forgetful_tool("query_memory", {
-  "query": "symbol index navigation classes",
-  "query_context": "Verifying entry memories link to documents",
-  "project_ids": [<project_id>]
-})
-```
-
-Should return entry memory with `document_ids` populated. The entry memory provides quick context; the linked document provides full detail.
-
-### Test Project Notes
-```
-execute_forgetful_tool("get_project", {
-  "project_id": <project_id>
-})
-```
-
-Verify `notes` field contains high-level overview (entry point, tech stack, architecture, key patterns).
 
 Test with architecture questions - Serena-encoded repos should answer accurately.
 
