@@ -33,8 +33,8 @@
         "source": "github",
         "repo": "ScottRBK/context-hub-plugin"
       },
-      "description": "Unified context retrieval from Forgetful Memory, Context7 docs, and Serena symbol analysis",
-      "version": "1.0.1",
+      "description": "Unified context retrieval with pluggable memory backends (Graphiti/Forgetful), Context7 docs, and Serena symbol analysis",
+      "version": "2.0.0",
       "author": {
         "name": "Scott Raisbeck"
       },
@@ -47,7 +47,10 @@
         "context7",
         "serena",
         "forgetful",
-        "code-analysis"
+        "graphiti",
+        "knowledge-graph",
+        "code-analysis",
+        "pluggable-backend"
       ],
       "category": "productivity"
     }
