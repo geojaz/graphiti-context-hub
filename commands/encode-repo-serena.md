@@ -66,19 +66,19 @@ Parse for:
 
 | Profile | Phase 1 | Phase 1B | Phase 2 | Phase 2B | Phase 3 | Phase 4 | Phase 5 | Phase 6 | Phase 6B | Phase 7B | Total |
 |---------|---------|----------|---------|----------|---------|---------|---------|---------|----------|----------|-------|
-| Small Simple | 3-5 | 1-2 | 3-5 | 3-5 entities | 3-5 | 2-4 | 0-2 | 3-5 artifacts | 1 doc + 1 mem | 1 doc + 1 mem | 17-31 memories + 2 docs + 3-5 artifacts + entities |
-| Small Complex | 5-7 | 1-2 | 5-8 | 5-10 entities | 5-8 | 4-6 | 0-3 | 5-8 artifacts | 1 doc + 1 mem | 1 doc + 1 mem | 28-46 memories + 2 docs + 5-8 artifacts + entities |
-| Medium Standard | 5-10 | 1-2 | 10-15 | 10-20 entities | 8-12 | 5-10 | 0-5 | 5-10 artifacts | 1-2 docs + 1-2 mems | 1 doc + 1 mem | 38-66 memories + 2-3 docs + 5-10 artifacts + entities |
-| Large | 8-12 | 2-3 | 15-20 | 20-40 entities | 12-18 | 10-15 | 0-8 | 8-15 artifacts | 2-4 docs + 2-4 mems | 1-2 docs + 1-2 mems | 66-112 memories + 3-6 docs + 8-15 artifacts + entities |
+| Small Simple | 3-5 | 1 | 3-5 | 3-5 | 3-5 | 2-4 | 0-2 | 3-5 | 1 | 1 | 20-33 memories |
+| Small Complex | 5-7 | 1 | 5-8 | 5-10 | 5-8 | 4-6 | 0-3 | 5-8 | 1 | 1 | 32-52 memories |
+| Medium Standard | 5-10 | 1 | 10-15 | 10-20 | 8-12 | 5-10 | 0-5 | 5-10 | 1-2 | 1 | 46-86 memories |
+| Large | 8-12 | 2 | 15-20 | 20-40 | 12-18 | 10-15 | 0-8 | 8-15 | 2-4 | 1-2 | 78-136 memories |
 
 **Notes**:
-- Phase 1 now includes project.notes update (instant context primer)
-- Phase 1B creates 1-3 dependency memories per project
-- **Phase 2B is MANDATORY** - creates entities for components and their relationships
+- All content stored as memories using bridge
+- Phase 1B creates 1-2 dependency memories per project
+- **Phase 2B is MANDATORY** - creates component memories documenting relationships
 - Phase 5 is CONDITIONAL - only if explicit documentation exists (see Phase 5 guidelines)
-- **Phase 6 is MANDATORY** - minimum 3 code artifacts for any project
-- Phase 6B creates Symbol Index document(s) with entry memory - split by layer for large projects
-- Phase 7B creates Architecture Reference document with entry memory
+- **Phase 6 is MANDATORY** - minimum 3 code example memories for any project
+- Phase 6B creates Symbol Index memory - split by layer for large projects
+- Phase 7B creates Architecture Reference memory - split by layer for very large projects
 
 ---
 
@@ -98,11 +98,11 @@ Phase [N] Complete:
 - Phase 0: Discovery
 - Phase 1: Foundation
 - Phase 2: Architecture
-- **Phase 2B: Entity Graph** (minimum 3 entities for any project)
+- **Phase 2B: Components** (minimum 3 component memories)
 - Phase 3: Patterns (minimum 3 pattern memories)
-- Phase 6: Code Artifacts (minimum 3 artifacts)
-- Phase 6B: Symbol Index
-- Phase 7B: Architecture Document
+- Phase 6: Code Examples (minimum 3 code example memories)
+- Phase 6B: Symbol Index (1 memory)
+- Phase 7B: Architecture Reference (1 memory)
 
 **Conditional phases** (skip only if criteria not met):
 - Phase 1B: Dependencies (skip if single-file script with no deps)
@@ -181,7 +181,7 @@ Report findings before proceeding.
 
 ### Memory Adapter Setup
 
-The memory adapter auto-detects the group_id from the git repo. For advanced Forgetful features (projects, entities, documents), you'll need the project_id:
+The memory adapter auto-detects the group_id from the git repo:
 
 ```python
 import sys
@@ -191,52 +191,9 @@ sys.path.insert(0, str(Path.cwd() / 'lib'))
 from bridge import memory_get_config
 
 config = memory_get_config()
-group_id = config['group_id']
-print(f"Group ID: {group_id}")
-
-# For Forgetful backend only: Get or create project
-if config['backend'] == 'forgetful':
-    result = execute_forgetful_tool("list_projects", {})
-
-    # Find or create project
-    project_id = None
-    for project in result.get("projects", []):
-        if project.get("name") == group_id:
-            project_id = project.get("id")
-            break
-
-    if not project_id:
-        create_result = execute_forgetful_tool("create_project", {
-            "name": group_id,
-            "description": "<problem solved, features, tech stack>",
-            "project_type": "development",
-            "repo_name": group_id
-        })
-        project_id = create_result.get("project_id", create_result.get("id"))
-
-    # Update project notes (Forgetful-specific feature)
-    execute_forgetful_tool("update_project", {
-        "project_id": project_id,
-        "notes": "Entry: python3 -m ProjectName.main <mode>
-Tech: Python 3.12, ClickHouse, XGBoost, FastAPI, Streamlit
-Architecture: 6-layer (Data→Domain→Processing→ML→Strategy→Presentation)
-Key patterns: Repository, Async generators, Batch writes, Factory
-Core components: ConnectionPool, Fetchers, Writers, ML Pipeline"
-    })
-
-    print(f"Project ID: {project_id}")
-else:
-    print("Graphiti backend - using group_id directly")
+print(f"Backend: {config['backend']}")
+print(f"Group ID: {config['group_id']}")
 ```
-
-**Notes format guidance** (500-1000 chars max, Forgetful only):
-- Entry point command
-- Tech stack summary (language, major frameworks, database)
-- Architecture pattern (layer count, pattern name)
-- Key patterns used
-- Core components (top 5 by importance)
-
-This provides instant context without querying memories.
 
 ### Create Foundation Memories
 
@@ -437,162 +394,97 @@ memory_save(
 
 ---
 
-## Phase 2B: Entity Graph Creation (MANDATORY)
+## Phase 2B: Component Relationships (via Memories)
 
-**Purpose**: Build a knowledge graph of project components and their relationships in Forgetful.
+**Purpose**: Document project components and their relationships using the bridge.
 
-**THIS PHASE IS MANDATORY** - Minimum 3 entities for any project.
+Components are captured through memories. Entity extraction is automatic:
+- **Graphiti**: Extracts entities automatically from memory content
+- **Forgetful**: Requires manual entity creation (see Advanced Features section)
 
-### Why Entities Matter
+### Minimum Requirements
 
-Entities enable:
-- Cross-project discovery ("What projects use FastAPI?")
-- Relationship mapping ("What depends on this component?")
-- Knowledge graph navigation beyond text search
-- Grounding abstract concepts in concrete components
+| Project Size | Component Memories |
+|--------------|-------------------|
+| Small | 3-5 |
+| Medium | 10-20 |
+| Large | 20-40 |
 
-Without entities, the encoding is incomplete. An agent querying "what components exist" will get nothing.
+### Create Component Memories
 
-### Minimum Entity Requirements
+Document major components discovered via Serena:
 
-| Project Size | Component Entities | Library/Framework Entities | Total Minimum |
-|--------------|-------------------|---------------------------|---------------|
-| Small | 2-3 core classes | 1-2 key deps | 3-5 |
-| Medium | 5-10 services/modules | 3-5 frameworks | 10-20 |
-| Large | 10-20 major components | 5-10 key deps | 20-40 |
-
-### Entity Deduplication (ALWAYS CHECK FIRST)
-
-Before creating any entity, check if it already exists:
-```
-execute_forgetful_tool("search_entities", {
-  "query": "<entity-name>",
-  "limit": 5
-})
-```
-
-The search checks both `name` and `aka` (aliases) fields.
-
-- **If found**: Use existing entity ID, optionally update notes/tags
-- **If not found**: Create with comprehensive `aka` list for future matching
-
-### Standard Entity Types
-
-Use `entity_type: "other"` with these `custom_type` values (allow flexibility for non-standard cases):
-- `Library` - external packages/dependencies (npm, pip, cargo packages)
-- `Service` - backend services, APIs, microservices
-- `Component` - major code components, modules
-- `Tool` - build tools, CLI tools, parsers
-- `Framework` - core frameworks (or use `entity_type: "organization"`)
-
-### Entity Creation Criteria
-
-Only create entities for **major components**:
-- High reference count from Serena (agent judges "high" based on project size)
-- Core architectural components (services, modules with many dependents)
-- External dependencies central to the project
-- Services/modules that other components depend on
-
-### Tagging Strategy
-
-- Use `project_ids` for scoping (no discovery-method tags)
-- Tag by role: `library`, `service`, `component`, `database`, `framework`, `tool`
-- Tag by domain if relevant: `auth`, `api`, `storage`, `ui`, `config`
-
-**NOTE: Entity graph features are currently only available in Forgetful backend.**
-
-### Step 1: Create Entities for Major Components (Forgetful Only)
-
-For each major component discovered via Serena:
 ```python
-# Only if using Forgetful backend
-if config['backend'] == 'forgetful':
-    execute_forgetful_tool("create_entity", {
-        "name": "AuthenticationService",
-        "entity_type": "other",
-        "custom_type": "Service",
-        "notes": "Centralized auth service. Location: src/services/auth.py. Handles token validation, user context injection.",
-        "tags": ["service", "auth"],
-        "aka": ["AuthService", "auth", "auth_service"],
-        "project_ids": [project_id]
-    })
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_save
+
+# Component memory example
+memory_save(
+    content="""AuthenticationService handles token validation and user context injection.
+Location: src/services/auth.py
+Dependencies: FastAPI, JWT library
+Used by: All API endpoints requiring auth
+Reference count: 42 (high usage across codebase)
+Key methods: validate_token(), get_user_context()""",
+    title="[Project] - AuthenticationService Component",
+    context="Core service for authentication",
+    keywords=["component", "auth", "service", "authentication"],
+    tags=["component", "auth"],
+    importance=8
+)
+
+# Framework/library memory example
+memory_save(
+    content="""FastAPI is the core HTTP framework.
+Version: 0.104.1
+Used for: REST API endpoints, WebSocket connections
+Integration: Dependency injection via Depends()
+Major components using it: All service endpoints""",
+    title="[Project] - FastAPI Framework Integration",
+    context="Core framework for HTTP layer",
+    keywords=["framework", "fastapi", "api", "http"],
+    tags=["framework", "dependency"],
+    importance=8
+)
 ```
 
-### Step 2: Create Entities for Key Dependencies (Forgetful Only)
+### Document Relationships
 
-For external libraries central to the project:
+Use content to capture relationships:
+
 ```python
-if config['backend'] == 'forgetful':
-    execute_forgetful_tool("create_entity", {
-        "name": "FastAPI",
-        "entity_type": "other",
-        "custom_type": "Framework",
-        "notes": "Python async web framework. Used for REST API and WebSocket endpoints.",
-        "tags": ["framework", "api"],
-        "aka": ["fastapi", "fast-api", "fast_api"],
-        "project_ids": [project_id]
-    })
+memory_save(
+    content="""Component dependencies in [Project]:
+
+AuthenticationService → FastAPI (uses for routing)
+DataService → PostgreSQL (connects for storage)
+APIHandler → AuthenticationService (depends on for auth)
+MLPipeline → XGBoost (uses for predictions)
+
+Relationship strengths based on Serena reference counts:
+- High usage (30+ refs): AuthenticationService→FastAPI
+- Medium usage (10-30 refs): DataService→PostgreSQL
+- Low usage (<10 refs): MLPipeline→XGBoost""",
+    title="[Project] - Component Dependency Graph",
+    context="How components connect and depend on each other",
+    keywords=["dependencies", "relationships", "components", "architecture"],
+    tags=["architecture", "relationships"],
+    importance=9
+)
 ```
-
-### Step 3: Create Relationships (Forgetful Only)
-
-Map how components connect using reference counts from Serena:
-```python
-if config['backend'] == 'forgetful':
-    execute_forgetful_tool("create_entity_relationship", {
-        "source_entity_id": component_entity_id,
-        "target_entity_id": library_id,
-        "relationship_type": "uses",
-        "strength": 1.0,
-        "metadata": {
-            "version": "0.104.1",
-            "role": "HTTP framework and routing"
-        }
-    })
-```
-
-**Relationship types**:
-- `uses` - project/component uses library
-- `depends_on` - component depends on another
-- `calls` - service calls another service
-- `extends` - class extends base class
-- `implements` - class implements interface
-- `connects_to` - system connects to database/service
-
-**Strength calculation**:
-- Based on Serena reference count
-- Normalize to 0.0-1.0 scale within project
-- Higher reference count = higher strength
-
-### Step 4: Link Entities to Memories (Forgetful Only)
-
-Connect entities to their architecture memories:
-```python
-if config['backend'] == 'forgetful':
-    execute_forgetful_tool("link_entity_to_memory", {
-        "entity_id": component_entity_id,
-        "memory_id": architecture_memory_id
-    })
-```
-
-This enables bidirectional discovery:
-- Find entity → get related memories
-- Query memories → discover linked entities
-
-**For Graphiti backend**: Entity extraction is automatic during memory save. No explicit entity creation needed.
 
 ### Phase 2B Completion Checkpoint
 
 ```
 Phase 2B Complete:
-- Component entities created: [count] (minimum 2-3)
-- Library/framework entities created: [count] (minimum 1-2)
-- Relationships created: [count]
-- Entities linked to memories: [count]
+- Component memories created: [count] (minimum 3-5)
+- Relationship memory created: 1
+- Key components documented: [list]
 - Status: ✅ Met minimum / ❌ Not met (create more before proceeding)
 ```
-
-**DO NOT proceed to Phase 3 until minimum entity count is met.**
 
 ---
 
@@ -903,36 +795,36 @@ Phase 5 Complete:
 
 ---
 
-## Phase 6: Code Artifacts (MANDATORY, minimum 3)
+## Phase 6: Code Examples (MANDATORY, minimum 3)
 
 **Purpose**: Store reusable code patterns that enable an agent to understand HOW the codebase works, not just WHAT exists.
 
-**THIS PHASE IS MANDATORY** - Minimum 3 artifacts for any project.
+**THIS PHASE IS MANDATORY** - Minimum 3 code example memories for any project.
 
-### Why Code Artifacts Matter
+### Why Code Examples Matter
 
-Without artifacts, an agent knows components exist but cannot:
+Without code examples, an agent knows components exist but cannot:
 - Write code that integrates with existing patterns
 - Understand implementation details
 - See actual syntax and conventions used
 - Learn project-specific idioms
 
-### Artifact Selection Criteria
+### Example Selection Criteria
 
-Create artifacts for:
+Create examples for:
 1. **Core patterns** - Most-used patterns from Phase 3 (async generators, factories, etc.)
 2. **Interface contracts** - Base classes/interfaces that define extensibility points
 3. **Entry point examples** - Main handlers, API endpoints, CLI commands
 4. **Utility functions** - Frequently-used helpers
 5. **Configuration patterns** - How config is loaded/used
 
-### Minimum Artifact Requirements
+### Minimum Requirements
 
-| Project Size | Minimum Artifacts | Recommended |
-|--------------|-------------------|-------------|
-| Small | 3 | 3-5 |
-| Medium | 5 | 5-10 |
-| Large | 8 | 8-15 |
+| Project Size | Minimum Code Examples |
+|--------------|----------------------|
+| Small | 3 |
+| Medium | 5 |
+| Large | 8 |
 
 ### Extract Code Using Serena
 
@@ -943,45 +835,49 @@ mcp__plugin_serena_serena__find_symbol({
 })
 ```
 
-### Create Artifacts (Forgetful Only)
-
-**NOTE: Code artifacts are a Forgetful-specific feature.**
+### Create Code Example Memories
 
 For each key pattern/utility:
-```python
-if config['backend'] == 'forgetful':
-    execute_forgetful_tool("create_code_artifact", {
-        "title": "[Project] - [Pattern Name] ([Language])",
-        "description": """What: [brief description of what it does].
-When: [when to use this pattern].
-Where: [file location in codebase].
-Usage: [how other code uses this].""",
-        "code": "<full implementation from find_symbol>",
-        "language": "python",
-        "tags": ["pattern", "<domain-tag>"],
-        "project_id": project_id
-    })
-else:
-    # For Graphiti, save as regular memory with code
-    memory_save(
-        content=f"""# [Pattern Name] ([Language])
-
-What: [brief description of what it does].
-When: [when to use this pattern].
-Where: [file location in codebase].
-Usage: [how other code uses this].
 
 ```python
-<full implementation from find_symbol>
-```""",
-        title="[Project] - [Pattern Name] Code Example",
-        keywords=["code", "pattern", "example"],
-        tags=["pattern", "code"],
-        importance=7
-    )
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
+
+from bridge import memory_save
+
+memory_save(
+    content="""# Async Generator Pattern (Python)
+
+What: Streams data chunks asynchronously without loading entire dataset in memory.
+When: Processing large datasets that don't fit in RAM.
+Where: src/data/fetchers.py - DataFetcher.stream_results()
+Usage: Used by all batch processing pipelines (15 locations).
+
+```python
+async def stream_results(self, query: str) -> AsyncGenerator[Batch, None]:
+    \"\"\"Stream query results in batches.\"\"\"
+    async with self.pool.get_connection() as conn:
+        cursor = await conn.cursor()
+        await cursor.execute(query)
+
+        while True:
+            batch = await cursor.fetchmany(self.batch_size)
+            if not batch:
+                break
+            yield Batch(data=batch)
 ```
 
-### Recommended Artifacts by Project Type
+Referenced by: MLPipeline, DataExporter, ReportGenerator (Serena ref count: 15)""",
+    title="[Project] - Async Generator Pattern (Python)",
+    context="Core pattern for memory-efficient data streaming",
+    keywords=["code", "pattern", "async", "generator", "streaming"],
+    tags=["pattern", "code", "example"],
+    importance=8
+)
+```
+
+### Recommended Examples by Project Type
 
 **Web API**:
 1. Request handler pattern (endpoint example)
@@ -1011,19 +907,19 @@ Usage: [how other code uses this].
 
 ```
 Phase 6 Complete:
-- Code artifacts created: [count] (minimum 3)
-- Artifacts by category: [patterns: X, interfaces: Y, utilities: Z]
-- Artifact titles: [list]
+- Code example memories created: [count] (minimum 3)
+- Examples by category: [patterns: X, interfaces: Y, utilities: Z]
+- Example titles: [list]
 - Status: ✅ Met minimum / ❌ Not met (create more before proceeding)
 ```
 
-**DO NOT proceed to Phase 6B until minimum artifact count is met.**
+**DO NOT proceed to Phase 6B until minimum count is met.**
 
 ---
 
-## Phase 6B: Symbol Index Document
+## Phase 6B: Symbol Index Memory
 
-**Purpose**: Compile Serena's LSP symbol analysis into a permanent, searchable Forgetful document.
+**Purpose**: Compile Serena's LSP symbol analysis into a permanent, searchable memory.
 
 This captures symbol locations, relationships, and reference counts that would otherwise be lost when Serena is not active.
 
@@ -1035,34 +931,17 @@ Collect from all `get_symbols_overview` and `find_symbol` calls during Phase 2:
 - Key functions with callers (from `find_referencing_symbols`)
 - Reference counts for each symbol
 
-### Step 2: Create Symbol Index Document (Forgetful Only)
-
-**NOTE: Documents are a Forgetful-specific feature.**
+### Step 2: Create Symbol Index Memory
 
 ```python
-if config['backend'] == 'forgetful':
-    execute_forgetful_tool("create_document", {
-        "title": "[Project] - Symbol Index",
-        "description": "LSP-accurate symbol listing with locations, relationships, and reference counts. Generated via Serena analysis.",
-        "content": "<structured markdown table - see format below>",
-        "document_type": "markdown",
-        "project_id": project_id,
-        "tags": ["symbol-index", "reference", "navigation"]
-    })
-else:
-    # For Graphiti, save as long-form memory
-    memory_save(
-        content="<structured markdown table>",
-        title="[Project] - Symbol Index",
-        keywords=["symbols", "index", "navigation"],
-        tags=["symbol-index", "reference"],
-        importance=8
-    )
-```
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
 
-**Document Format:**
-```markdown
-# [Project] - Symbol Index
+from bridge import memory_save
+
+memory_save(
+    content="""# [Project] - Symbol Index
 
 Generated: [date]
 Total: X classes, Y interfaces, Z functions
@@ -1071,27 +950,60 @@ Total: X classes, Y interfaces, Z functions
 
 | Symbol | Location | Description | Refs |
 |--------|----------|-------------|------|
-| ClassName | path/file.py:line | Brief description | count |
-| ... | ... | ... | ... |
+| AuthenticationService | src/services/auth.py:15 | Centralized auth service | 42 |
+| DataFetcher | src/data/fetchers.py:8 | Async data streaming | 15 |
+| MLPipeline | src/ml/pipeline.py:22 | ML training pipeline | 8 |
 
 ## Interfaces
 
 | Symbol | Location | Implementations |
 |--------|----------|-----------------|
-| InterfaceName | path/file.py:line | Impl1, Impl2 |
-| ... | ... | ... |
+| BaseRepository | src/repositories/base.py:5 | UserRepo, DataRepo, ConfigRepo |
+| Handler | src/handlers/base.py:3 | APIHandler, CLIHandler |
 
 ## Key Functions
 
 | Symbol | Location | Called By |
 |--------|----------|-----------|
-| func_name | path/file.py:line | Caller1, Caller2 |
-| ... | ... | ... |
+| validate_token | src/services/auth.py:45 | All API endpoints (42 locations) |
+| batch_process | src/data/processing.py:78 | MLPipeline, DataExporter |
+| transform_data | src/data/transforms.py:12 | DataFetcher, MLPipeline |
+
+## Top Referenced Symbols (by ref count)
+1. AuthenticationService - 42 refs
+2. DataFetcher - 15 refs
+3. MLPipeline - 8 refs
+
+## Key Interfaces (by implementation count)
+1. BaseRepository - 3 implementations
+2. Handler - 2 implementations""",
+    title="[Project] - Symbol Index",
+    context="LSP-accurate symbol listing with locations and relationships",
+    keywords=["symbols", "classes", "functions", "navigation", "index"],
+    tags=["reference", "navigation", "symbol-index"],
+    importance=8
+)
 ```
 
-### Step 3: Create Entry Memory
+### Size Guidelines
 
-Create an atomic memory that summarizes the index:
+| Project Size | Est. Symbols | Memory Size | Strategy |
+|--------------|--------------|-------------|----------|
+| Small | <50 | <2000 words | Single memory |
+| Medium | 50-150 | 2000-5000 words | Single memory |
+| Large | 150+ | >5000 words | Split by layer |
+
+**If splitting** (large projects):
+- Create separate memories per architectural layer
+- Example: `[Project] - Symbol Index: Data Layer`, `[Project] - Symbol Index: API Layer`
+- Each split gets separate memory with layer-specific symbols
+
+---
+
+## Phase 7: Additional Reference Memories (as needed)
+
+For content >400 words (detailed guides, comprehensive analysis), save as long-form memories:
+
 ```python
 import sys
 from pathlib import Path
@@ -1099,82 +1011,21 @@ sys.path.insert(0, str(Path.cwd() / 'lib'))
 
 from bridge import memory_save
 
-if config['backend'] == 'forgetful':
-    # Link to document
-    execute_forgetful_tool("create_memory", {
-        "title": "[Project] - Symbol Index Reference",
-        "content": """Symbol index contains X classes, Y interfaces, Z functions.
-Top referenced: [list top 5 by ref count].
-Key interfaces: [list with implementation counts].
-Full index in linked document.""",
-        "context": "Entry point for symbol navigation - links to full index document",
-        "keywords": ["symbols", "classes", "functions", "navigation", "index"],
-        "tags": ["reference", "navigation", "symbol-index"],
-        "importance": 8,
-        "project_ids": [project_id],
-        "document_ids": [symbol_index_doc_id]
-    })
-else:
-    # For Graphiti, single memory with all info
-    memory_save(
-        content="""Symbol index contains X classes, Y interfaces, Z functions.
-Top referenced: [list top 5 by ref count].
-Key interfaces: [list with implementation counts].""",
-        title="[Project] - Symbol Index Reference",
-        context="Entry point for symbol navigation",
-        keywords=["symbols", "classes", "functions", "navigation", "index"],
-        tags=["reference", "navigation", "symbol-index"],
-        importance=8
-    )
-```
-
-### Size Guidelines
-
-| Project Size | Est. Symbols | Doc Size | Split? |
-|--------------|--------------|----------|--------|
-| Small | <50 | <2000 words | No |
-| Medium | 50-150 | 2000-5000 words | No |
-| Large | 150+ | >5000 words | Yes, by layer |
-
-**If splitting** (large projects):
-- Create separate docs per architectural layer: `[Project] - Symbol Index: Data Layer`
-- Each doc gets its own entry memory
-- Entry memories link to their respective documents
-
----
-
-## Phase 7: Documents (as needed)
-
-**NOTE: Documents are a Forgetful-specific feature.**
-
-For content >400 words (detailed guides, comprehensive analysis):
-```python
-if config['backend'] == 'forgetful':
-    execute_forgetful_tool("create_document", {
-        "title": "Document name",
-        "description": "Overview and purpose",
-        "content": "<full documentation>",
-        "document_type": "markdown",
-        "project_id": project_id
-    })
-
-    # Create 3-5 atomic memories as entry points, linked via document_ids
-else:
-    # For Graphiti, save as long-form memory
-    memory_save(
-        content="<full documentation>",
-        title="Document name",
-        keywords=["documentation", "guide"],
-        tags=["reference"],
-        importance=8
-    )
+memory_save(
+    content="<full documentation>",
+    title="[Project] - [Topic] Reference",
+    context="Comprehensive guide for [topic]",
+    keywords=["documentation", "guide", "reference"],
+    tags=["reference", "documentation"],
+    importance=8
+)
 ```
 
 ---
 
-## Phase 7B: Architecture Document
+## Phase 7B: Architecture Reference Memory
 
-**Purpose**: Consolidate architecture analysis into a comprehensive reference document that persists Serena's insights.
+**Purpose**: Consolidate architecture analysis into a comprehensive reference memory that persists Serena's insights.
 
 This creates the definitive architecture reference, accessible even when Serena is not active.
 
@@ -1182,36 +1033,21 @@ This creates the definitive architecture reference, accessible even when Serena 
 
 Combine insights from:
 - Phase 2 architecture memories (symbol-level analysis)
-- Phase 2B entity relationships (component graph)
+- Phase 2B component relationships
 - Phase 3 pattern discoveries
 - Serena's `find_referencing_symbols` relationship data
 
-### Step 2: Create Architecture Document
+### Step 2: Create Architecture Reference Memory
 
 ```python
-if config['backend'] == 'forgetful':
-    execute_forgetful_tool("create_document", {
-        "title": "[Project] - Architecture Reference",
-        "description": "Comprehensive architecture documentation with layer details, component relationships, and design patterns. Generated via Serena symbol analysis.",
-        "content": "<structured architecture doc - see format below>",
-        "document_type": "markdown",
-        "project_id": project_id,
-        "tags": ["architecture", "reference", "design"]
-    })
-else:
-    # For Graphiti, save as memory
-    memory_save(
-        content="<structured architecture doc>",
-        title="[Project] - Architecture Reference",
-        keywords=["architecture", "reference", "design"],
-        tags=["architecture", "reference"],
-        importance=9
-    )
-```
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
 
-**Document Format:**
-```markdown
-# [Project] - Architecture Reference
+from bridge import memory_save
+
+memory_save(
+    content="""# [Project] - Architecture Reference
 
 Generated: [date]
 
@@ -1226,85 +1062,73 @@ Generated: [date]
 │  (Streamlit Dashboard + FastAPI Prediction Server)           │
 └─────────────────────────────────────────────────────────────┘
                             ↓
-[Continue with layer diagram...]
+┌─────────────────────────────────────────────────────────────┐
+│              Strategy Layer                                  │
+│       (Decision Logic + Portfolio Management)                │
+└─────────────────────────────────────────────────────────────┘
+[Continue with remaining layers...]
 
 ## Layer Details
 
-### [Layer Name]
+### Presentation Layer
 
-**Purpose**: [what this layer does]
+**Purpose**: User interfaces and external API
 
 **Key Components**:
-- ComponentName (location: path/file.py): [brief description]
-  - Key methods: method1(), method2()
-  - Used by: [list consumers from find_referencing_symbols]
+- StreamlitApp (location: src/ui/app.py): Interactive dashboard
+  - Key methods: render_dashboard(), handle_user_input()
+  - Used by: End users
+- PredictionAPI (location: src/api/server.py): REST API for predictions
+  - Key methods: predict_endpoint(), health_check()
+  - Used by: External systems (Serena ref count: 8)
 
-**Patterns Used**: [patterns in this layer]
+**Patterns Used**: Dependency injection, async handlers
 
 ### [Next Layer...]
 
 ## Cross-Cutting Concerns
 
 ### Error Handling
-[how errors flow through the system]
+All layers use centralized ErrorHandler. Exceptions bubble up with context.
 
 ### Configuration
-[how config is managed]
+Settings loaded via Pydantic from config.yaml. Environment overrides supported.
 
 ### Testing
-[testing approach and locations]
+Unit tests in tests/ directory. Integration tests use pytest fixtures.
 
-## Key Design Decisions
+## Component Relationships (from Serena analysis)
 
-[Only if documented in repo - from Phase 5]
-```
+- AuthenticationService (42 refs) → FastAPI
+- DataFetcher (15 refs) → PostgreSQL, Redis
+- MLPipeline (8 refs) → XGBoost, DataFetcher
 
-### Step 3: Create Entry Memory
+## Key Patterns
 
-Create an atomic memory that summarizes the architecture:
-```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
+1. Async Generator Pattern - Memory-efficient streaming (15 uses)
+2. Repository Pattern - Data access abstraction (8 implementations)
+3. Dependency Injection - Via FastAPI Depends (42 uses)
+4. Factory Pattern - Component creation (6 factories)
 
-from bridge import memory_save
+## Design Decisions
 
-if config['backend'] == 'forgetful':
-    # Link to document
-    execute_forgetful_tool("create_memory", {
-        "title": "[Project] - Architecture Reference",
-        "content": """[Layer count]-layer architecture: [list layers].
-Key patterns: [top 4-5 patterns].
-Core components: [top 5 by reference count].
-Full reference in linked document.""",
-        "context": "Entry point for architecture deep-dives - links to comprehensive document",
-        "keywords": ["architecture", "layers", "patterns", "design", "structure"],
-        "tags": ["architecture", "reference", "foundation"],
-        "importance": 9,
-        "project_ids": [project_id],
-        "document_ids": [arch_doc_id]
-    })
-else:
-    # For Graphiti, single comprehensive memory
-    memory_save(
-        content="""[Layer count]-layer architecture: [list layers].
-Key patterns: [top 4-5 patterns].
-Core components: [top 5 by reference count].""",
-        title="[Project] - Architecture Reference",
-        context="Entry point for architecture deep-dives",
-        keywords=["architecture", "layers", "patterns", "design", "structure"],
-        tags=["architecture", "reference", "foundation"],
-        importance=9
-    )
+[Only if documented in repo - from Phase 5]""",
+    title="[Project] - Architecture Reference",
+    context="Comprehensive architecture documentation from Serena analysis",
+    keywords=["architecture", "layers", "patterns", "design", "structure"],
+    tags=["architecture", "reference", "foundation"],
+    importance=9
+)
 ```
 
 ### Size Guidelines
 
 - **Target**: 3000-8000 words
-- **If exceeding 8000 words**, consider splitting by:
-  - Layer (Data Architecture, ML Architecture, API Architecture)
-  - Concern (Core Architecture, Integration Points, Deployment)
-- Each split doc gets its own entry memory
+- **If exceeding 8000 words**, split into multiple memories:
+  - `[Project] - Architecture Reference: Data Layer`
+  - `[Project] - Architecture Reference: ML Layer`
+  - `[Project] - Architecture Reference: API Layer`
+- Each split memory covers one architectural concern
 
 ---
 
@@ -1319,13 +1143,13 @@ Execute in order: 0 → 1 → 1B → 2 → **2B** → 3 → 4 → 5 → **6** �
 | Phase | Minimum Output | Gate |
 |-------|---------------|------|
 | 0: Discovery | Gap analysis report | Report before proceeding |
-| 1: Foundation | 5 memories + project notes | All 5 core memories |
+| 1: Foundation | 5 memories | All 5 core memories |
 | 2: Architecture | Layer memories | 1 per architectural layer |
-| **2B: Entities** | **3+ entities** | **Entity count met** |
+| **2B: Components** | **3+ component memories** | **Component count met** |
 | 3: Patterns | **3+ pattern memories** | Pattern count met |
-| **6: Artifacts** | **3+ code artifacts** | **Artifact count met** |
-| 6B: Symbol Index | 1 document + entry memory | Document created |
-| 7B: Architecture Doc | 1 document + entry memory | Document created |
+| **6: Code Examples** | **3+ code example memories** | **Example count met** |
+| 6B: Symbol Index | 1 memory | Memory created |
+| 7B: Architecture Reference | 1 memory | Memory created |
 
 ### Conditional Phases
 
@@ -1343,13 +1167,11 @@ Execute in order: 0 → 1 → 1B → 2 → **2B** → 3 → 4 → 5 → **6** �
 3. **Leverage Serena's strengths** - Symbol analysis over text search
 4. **Track relationships** - find_referencing_symbols is powerful
 5. **Aggregate symbol data** - Collect during Phase 2 for Phase 6B
-6. **Deduplicate entities** - Always search before creating
-7. **Use Context7** - Validate framework usage assumptions
-8. **Update outdated memories** as discovered
-9. **Link entities to memories** - Enable bidirectional discovery
-10. **Create entry memories** - Link documents via document_ids
-11. **Mark obsolete** - Memories that reference removed code
-12. **Phase 5 is documentation-only** - Never infer decisions from code
+6. **Use Context7** - Validate framework usage assumptions
+7. **Update outdated memories** as discovered
+8. **Mark obsolete** - Memories that reference removed code
+9. **Phase 5 is documentation-only** - Never infer decisions from code
+10. **Use only bridge methods** - memory_save(), memory_query(), memory_get_config()
 
 ## Quality Principles
 
@@ -1369,6 +1191,7 @@ Execute in order: 0 → 1 → 1B → 2 → **2B** → 3 → 4 → 5 → **6** �
 After completion, verify coverage:
 
 ### Test Memories
+
 ```python
 import sys
 from pathlib import Path
@@ -1379,61 +1202,23 @@ from bridge import memory_query
 # Test basic queries
 results = memory_query("How do I add a new API endpoint?", limit=5)
 print(f"Found {len(results)} results for endpoint query")
+for r in results:
+    print(f"  - {r['metadata'].get('title', 'Untitled')}")
 
 results = memory_query("What dependencies does this project use?", limit=5)
 print(f"Found {len(results)} results for dependency query")
+for r in results:
+    print(f"  - {r['metadata'].get('title', 'Untitled')}")
 
 results = memory_query("architecture patterns", limit=10)
 print(f"Found {len(results)} architecture memories")
-```
+for r in results:
+    print(f"  - {r['metadata'].get('title', 'Untitled')}")
 
-### Test Entities (Forgetful Only)
-```python
-if config['backend'] == 'forgetful':
-    # Test entity listing
-    result = execute_forgetful_tool("list_entities", {
-        "project_ids": [project_id]
-    })
-    print(f"Found {len(result.get('entities', []))} entities")
-
-    # Test by role
-    result = execute_forgetful_tool("list_entities", {
-        "project_ids": [project_id],
-        "tags": ["library"]
-    })
-    print(f"Found {len(result.get('entities', []))} library entities")
-
-    # Test relationships
-    result = execute_forgetful_tool("get_entity_relationships", {
-        "entity_id": component_entity_id,
-        "direction": "outgoing"
-    })
-    print(f"Found {len(result.get('relationships', []))} relationships")
-```
-
-### Test Documents (Forgetful Only)
-```python
-if config['backend'] == 'forgetful':
-    result = execute_forgetful_tool("list_documents", {
-        "project_id": project_id
-    })
-    print(f"Found {len(result.get('documents', []))} documents")
-
-    # Should show Symbol Index and Architecture Reference
-    for doc in result.get('documents', []):
-        print(f"  - {doc.get('title')}")
-
-    # Test document retrieval
-    result = execute_forgetful_tool("get_document", {
-        "document_id": symbol_index_doc_id
-    })
-    print("Symbol index document retrieved successfully")
-
-    # Test project notes
-    result = execute_forgetful_tool("get_project", {
-        "project_id": project_id
-    })
-    print(f"Project notes: {result.get('notes', 'N/A')[:100]}...")
+results = memory_query("code examples async", limit=5)
+print(f"Found {len(results)} code example memories")
+for r in results:
+    print(f"  - {r['metadata'].get('title', 'Untitled')}")
 ```
 
 Test with architecture questions - Serena-encoded repos should answer accurately.
@@ -1461,15 +1246,17 @@ When encoding is complete, provide a summary in this format:
 ```
 # [Project] Encoding Complete
 
-## Artifacts Created
+## Memories Created
 
 | Type | Count | Minimum | Status |
 |------|-------|---------|--------|
-| Memories | [X] | [per profile] | ✅/❌ |
-| Entities | [Y] | 3+ | ✅/❌ |
-| Relationships | [Z] | - | - |
-| Code Artifacts | [W] | 3+ | ✅/❌ |
-| Documents | [V] | 2 | ✅/❌ |
+| Foundation memories | [X] | 5 | ✅/❌ |
+| Architecture memories | [Y] | [per layer] | ✅/❌ |
+| Component memories | [Z] | 3+ | ✅/❌ |
+| Pattern memories | [W] | 3+ | ✅/❌ |
+| Feature memories | [V] | 3+ | ✅/❌ |
+| Code example memories | [U] | 3+ | ✅/❌ |
+| Reference memories | [T] | 2+ | ✅/❌ |
 
 ## Phase Completion Status
 
@@ -1479,32 +1266,162 @@ When encoding is complete, provide a summary in this format:
 | 1: Foundation | ✅ | [X] memories |
 | 1B: Dependencies | ✅/SKIP | [reason] |
 | 2: Architecture | ✅ | [X] layer memories |
-| 2B: Entities | ✅ | [X] entities, [Y] relationships |
+| 2B: Components | ✅ | [X] component memories |
 | 3: Patterns | ✅ | [X] pattern memories |
 | 4: Features | ✅/SKIP | [X] feature memories |
 | 5: Decisions | ✅/SKIP | [X] decisions (or: no documentation found) |
-| 6: Artifacts | ✅ | [X] code artifacts |
-| 6B: Symbol Index | ✅ | Document + entry memory |
-| 7B: Architecture | ✅ | Document + entry memory |
+| 6: Code Examples | ✅ | [X] code example memories |
+| 6B: Symbol Index | ✅ | Symbol index memory |
+| 7B: Architecture | ✅ | Architecture reference memory |
 
 ## Key Memories for Navigation
 
-1. **Overview**: [title] (ID: X)
-2. **Architecture**: [title] (ID: Y)
-3. **Symbol Index**: [title] (ID: Z, links to doc)
-4. **Architecture Doc**: [title] (ID: W, links to doc)
+1. **Overview**: [title]
+2. **Architecture Reference**: [title]
+3. **Symbol Index**: [title]
+4. **Component Dependency Graph**: [title]
 
-## Entity Graph Summary
+## Component Summary
 
-Components: [list]
-Frameworks: [list]
-Key relationships: [list]
+Components documented: [list]
+Frameworks documented: [list]
+Key relationships: [brief summary from dependency graph]
 
 ## Validation Queries Tested
 
-- "How do I add a new endpoint?" → [result summary]
-- "What patterns are used?" → [result summary]
-- "What components exist?" → [entity count returned]
+- "How do I add a new endpoint?" → [result count + top result]
+- "What patterns are used?" → [result count + top result]
+- "What components exist?" → [result count + top result]
+- "Show code examples for async" → [result count + top result]
 ```
 
 This summary confirms the encoding meets minimum requirements and provides quick navigation for future agents.
+
+---
+
+## Advanced: Forgetful-Only Features
+
+**NOTE**: The following features are ONLY available when using the Forgetful backend. The main workflow above works with BOTH backends using only bridge methods.
+
+If you need these advanced features, you must be using Forgetful backend AND call the MCP tools directly (outside the bridge).
+
+### Project Notes (Forgetful Only)
+
+Forgetful supports project-level metadata for instant context:
+
+```python
+# Get project_id first
+from bridge import memory_get_config
+config = memory_get_config()
+
+if config['backend'] == 'forgetful':
+    # Get or create project
+    result = execute_forgetful_tool("list_projects", {})
+    project_id = None
+    for project in result.get("projects", []):
+        if project.get("name") == config['group_id']:
+            project_id = project.get("id")
+            break
+
+    if not project_id:
+        create_result = execute_forgetful_tool("create_project", {
+            "name": config['group_id'],
+            "description": "Project description",
+            "project_type": "development"
+        })
+        project_id = create_result.get("project_id")
+
+    # Update project notes
+    execute_forgetful_tool("update_project", {
+        "project_id": project_id,
+        "notes": """Entry: python3 -m ProjectName.main
+Tech: Python 3.12, FastAPI, PostgreSQL
+Architecture: 6-layer (Data→Domain→Processing→ML→Strategy→Presentation)
+Key patterns: Repository, Async generators, Dependency injection"""
+    })
+```
+
+### Entity Graph (Forgetful Only)
+
+Forgetful supports explicit entity and relationship creation:
+
+```python
+if config['backend'] == 'forgetful':
+    # Create entity
+    entity_result = execute_forgetful_tool("create_entity", {
+        "name": "AuthenticationService",
+        "entity_type": "other",
+        "custom_type": "Service",
+        "notes": "Centralized auth service. Location: src/services/auth.py",
+        "tags": ["service", "auth"],
+        "aka": ["AuthService", "auth_service"],
+        "project_ids": [project_id]
+    })
+    entity_id = entity_result.get("entity_id")
+
+    # Create relationship
+    execute_forgetful_tool("create_entity_relationship", {
+        "source_entity_id": entity_id,
+        "target_entity_id": library_id,
+        "relationship_type": "uses",
+        "strength": 1.0,
+        "metadata": {"role": "HTTP framework"}
+    })
+
+    # Link entity to memory
+    execute_forgetful_tool("link_entity_to_memory", {
+        "entity_id": entity_id,
+        "memory_id": memory_id
+    })
+```
+
+**Note**: Graphiti extracts entities automatically from memory content. No explicit entity creation needed.
+
+### Code Artifacts (Forgetful Only)
+
+Forgetful supports dedicated code artifact storage:
+
+```python
+if config['backend'] == 'forgetful':
+    execute_forgetful_tool("create_code_artifact", {
+        "title": "[Project] - Async Generator Pattern (Python)",
+        "description": "Memory-efficient data streaming pattern",
+        "code": "<full code implementation>",
+        "language": "python",
+        "tags": ["pattern", "async"],
+        "project_id": project_id
+    })
+```
+
+**Note**: For cross-backend compatibility, the main workflow uses memory_save() with code in markdown blocks instead.
+
+### Documents (Forgetful Only)
+
+Forgetful supports long-form documents with linking:
+
+```python
+if config['backend'] == 'forgetful':
+    # Create document
+    doc_result = execute_forgetful_tool("create_document", {
+        "title": "[Project] - Symbol Index",
+        "description": "LSP-accurate symbol listing",
+        "content": "<full markdown content>",
+        "document_type": "markdown",
+        "project_id": project_id,
+        "tags": ["symbol-index", "reference"]
+    })
+    doc_id = doc_result.get("document_id")
+
+    # Create entry memory linked to document
+    execute_forgetful_tool("create_memory", {
+        "title": "[Project] - Symbol Index Reference",
+        "content": "Symbol index summary. Full index in linked document.",
+        "keywords": ["symbols", "index"],
+        "tags": ["reference"],
+        "importance": 8,
+        "project_ids": [project_id],
+        "document_ids": [doc_id]
+    })
+```
+
+**Note**: For cross-backend compatibility, the main workflow uses memory_save() for long-form content instead.
