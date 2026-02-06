@@ -47,7 +47,7 @@ claude plugins install context7 --marketplace pleaseai/claude-code-plugins
 
 ## Setup
 
-Run the setup command to configure Forgetful MCP and verify prerequisites:
+Run the setup command to configure your memory backend and verify prerequisites:
 
 ```bash
 /context-hub-setup
@@ -55,8 +55,11 @@ Run the setup command to configure Forgetful MCP and verify prerequisites:
 
 This will:
 1. Check if Serena and Context7 plugins are installed
-2. Configure Forgetful MCP server
-3. Report setup status
+2. Help you choose a memory backend (Graphiti or Forgetful)
+3. Create `.context-hub.yaml` configuration file
+4. Test MCP connectivity
+5. Verify group_id auto-detection
+6. Report comprehensive setup status
 
 ## Skills
 

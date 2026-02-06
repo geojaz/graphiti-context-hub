@@ -1,17 +1,23 @@
 ---
-description: Configure Context Hub dependencies (Forgetful MCP + plugin prerequisites)
+description: Configure Context Hub backend (Graphiti/Forgetful) and plugin prerequisites
 ---
 
 # Context Hub Setup
 
-Configure Context Hub's dependencies: Forgetful MCP server and prerequisite plugins.
+Configure Context Hub's memory backend and dependencies: Graphiti or Forgetful MCP server, plus prerequisite plugins.
 
-## Prerequisites
+## Overview
 
-Context Hub requires these plugins to be installed:
+Context Hub supports two memory backends:
+- **Graphiti** - Knowledge graph with automatic entity/relationship extraction (recommended)
+- **Forgetful** - Atomic memories with explicit linking
 
-1. **Serena** - Symbol-level code analysis (required for `/encode-repo-serena`)
-2. **Context7** - Framework documentation (recommended for `/context_gather`)
+This setup command will:
+1. Check plugin prerequisites (Serena, Context7)
+2. Help you choose and configure a memory backend
+3. Create `.context-hub.yaml` configuration file
+4. Test MCP connectivity
+5. Verify group_id auto-detection
 
 ## Step 1: Check Plugin Prerequisites
 
@@ -47,87 +53,286 @@ Or search for it:
   claude plugins search context7
 ```
 
-## Step 2: Configure Forgetful MCP
+## Step 2: Choose Memory Backend
 
-Check if Forgetful is already configured:
+Ask the user which backend they prefer:
 
-```bash
-claude mcp list | grep -i forgetful
-```
-
-If already configured:
-- Ask user if they want to reconfigure
-- If no, skip to Step 3
-- If yes, remove existing first: `claude mcp remove forgetful`
-
-### Setup Options
-
-Ask the user which setup they prefer:
-
-**Question**: "How would you like to configure Forgetful?"
+**Question**: "Which memory backend would you like to use?"
 
 **Options**:
-1. **Standard (Recommended)** - Zero config, uses uvx with SQLite storage
-2. **Custom** - Remote HTTP server, PostgreSQL, custom embeddings, etc.
+1. **Graphiti (Recommended)** - Knowledge graph with automatic entity extraction
+   - Best for: Complex projects, relationship discovery, semantic understanding
+   - Requires: Graphiti MCP server running (typically localhost:8000)
 
-### Standard Setup
+2. **Forgetful** - Atomic memories with explicit linking
+   - Best for: Simple notes, explicit memory management
+   - Requires: Forgetful MCP server (uvx or custom setup)
 
-```bash
-claude mcp add forgetful --scope user -- uvx forgetful-ai
-```
+### Option A: Graphiti Setup
 
-Confirm success:
-```bash
-claude mcp list | grep -i forgetful
-```
+If user chose Graphiti:
 
-Report: "Forgetful is now configured! Your memories will persist in `~/.forgetful/` using SQLite."
+1. **Check if Graphiti MCP is configured:**
+   ```bash
+   claude mcp list | grep -i graphiti
+   ```
 
-### Custom Setup
+2. **If not configured, guide setup:**
+   ```
+   To use Graphiti, you need the Graphiti MCP server running.
 
-If user chose Custom:
+   Installation options:
 
-1. Fetch configuration docs:
-```
-WebFetch: https://github.com/ScottRBK/forgetful/blob/main/docs/configuration.md
-```
+   1. Local server (Docker):
+      docker run -p 8000:8000 graphiti/mcp-server
 
-2. Guide through options:
+   2. Remote server:
+      Ensure server is accessible at configured endpoint
+
+   3. Add to Claude MCP config:
+      claude mcp add graphiti --scope user -- npx @graphiti/mcp-server
+
+   For detailed setup: https://github.com/getzep/graphiti
+   ```
+
+3. **Create `.context-hub.yaml`:**
+   ```python
+   import yaml
+   from pathlib import Path
+
+   config = {
+       'memory': {
+           'backend': 'graphiti',
+           'group_id': 'auto',
+           'graphiti': {
+               'endpoint': 'http://localhost:8000/mcp'
+           }
+       }
+   }
+
+   config_path = Path.cwd() / '.context-hub.yaml'
+   with open(config_path, 'w') as f:
+       yaml.dump(config, f, default_flow_style=False)
+
+   print(f"Created config at: {config_path}")
+   ```
+
+4. **Test connectivity:**
+   ```python
+   # Test Graphiti connection using bridge
+   import sys
+   from pathlib import Path
+
+   sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+   from bridge import memory_get_config, memory_list_operations
+
+   try:
+       config = memory_get_config()
+       print(f"✅ Backend: {config['backend']}")
+       print(f"✅ Group ID: {config['group_id']}")
+
+       # Test operation listing
+       ops = memory_list_operations()
+       print(f"✅ Connected to Graphiti - {len(ops)} operations available")
+
+   except Exception as e:
+       print(f"❌ Connection failed: {e}")
+       print("Ensure Graphiti MCP server is running and configured correctly")
+   ```
+
+### Option B: Forgetful Setup
+
+If user chose Forgetful:
+
+1. **Check if Forgetful MCP is configured:**
+   ```bash
+   claude mcp list | grep -i forgetful
+   ```
+
+2. **If not configured, ask setup preference:**
+
+   **Question**: "How would you like to configure Forgetful?"
+
+   **Options**:
+   - **Standard (Recommended)** - Zero config, uses uvx with SQLite storage
+   - **Custom** - Remote HTTP server, PostgreSQL, custom embeddings
+
+3. **Standard Setup:**
+   ```bash
+   claude mcp add forgetful --scope user -- uvx forgetful-ai
+   ```
+
+   Confirm:
+   ```bash
+   claude mcp list | grep -i forgetful
+   ```
+
+4. **Custom Setup:**
+
+   Fetch configuration docs:
+   ```
+   WebFetch: https://github.com/ScottRBK/forgetful/blob/main/docs/configuration.md
+   ```
+
+   Guide through options:
    - **Remote HTTP server** - Connect to Forgetful running elsewhere
    - **PostgreSQL backend** - Use Postgres instead of SQLite
    - **Custom embeddings** - Different embedding model/provider
 
-3. Build appropriate command based on choices.
+5. **Create `.context-hub.yaml`:**
+   ```python
+   import yaml
+   from pathlib import Path
 
-## Step 3: Verify Complete Setup
+   config = {
+       'memory': {
+           'backend': 'forgetful',
+           'group_id': 'auto',
+           'forgetful': {}
+       }
+   }
 
-Report status of all components:
+   config_path = Path.cwd() / '.context-hub.yaml'
+   with open(config_path, 'w') as f:
+       yaml.dump(config, f, default_flow_style=False)
 
+   print(f"Created config at: {config_path}")
+   ```
+
+6. **Test connectivity:**
+   ```python
+   # Test Forgetful connection using bridge
+   import sys
+   from pathlib import Path
+
+   sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+   from bridge import memory_get_config, memory_list_operations
+
+   try:
+       config = memory_get_config()
+       print(f"✅ Backend: {config['backend']}")
+       print(f"✅ Group ID: {config['group_id']}")
+
+       # Test operation listing
+       ops = memory_list_operations()
+       print(f"✅ Connected to Forgetful - {len(ops)} operations available")
+
+   except Exception as e:
+       print(f"❌ Connection failed: {e}")
+       print("Ensure Forgetful MCP server is configured and accessible")
+   ```
+
+## Step 3: Verify Group ID Auto-Detection
+
+Test that group_id is correctly detected:
+
+```python
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+from lib.config import get_git_repo_name, find_project_root
+
+# Check git detection
+git_name = get_git_repo_name()
+if git_name:
+    print(f"✅ Git repository detected: {git_name}")
+    print(f"   This will be used as your group_id")
+else:
+    fallback = Path.cwd().name
+    print(f"⚠️  No git repository found")
+    print(f"   Using directory name as group_id: {fallback}")
+
+# Show project root
+root = find_project_root()
+if root:
+    print(f"✅ Project root: {root}")
 ```
-Context Hub Setup Status:
--------------------------
-Forgetful MCP:  [Configured / Not configured]
-Serena Plugin:  [Installed / Not installed - run: claude plugins install serena]
-Context7 Plugin: [Installed / Not installed - run: claude plugins install context7 --marketplace pleaseai/claude-code-plugins]
 
-Commands available:
-- /context_gather - Multi-source context retrieval
-- /encode-repo-serena - Repository encoding (requires Serena)
-- /memory-search, /memory-list, /memory-save, /memory-explore - Memory management
+## Step 4: Verify Complete Setup
+
+Report comprehensive status:
+
+```python
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+from bridge import memory_get_config
+
+# Get config
+config = memory_get_config()
+
+print("=" * 50)
+print("Context Hub Setup Status")
+print("=" * 50)
+print(f"Memory Backend: {config['backend']}")
+print(f"Group ID:       {config['group_id']}")
+print(f"Config File:    {Path.cwd() / '.context-hub.yaml'}")
+print()
+
+# Check MCP status
+import subprocess
+
+def check_mcp(name):
+    try:
+        result = subprocess.run(
+            ['claude', 'mcp', 'list'],
+            capture_output=True,
+            text=True
+        )
+        return name.lower() in result.stdout.lower()
+    except:
+        return False
+
+backend = config['backend']
+mcp_status = "✅ Configured" if check_mcp(backend) else "❌ Not configured"
+print(f"{backend.capitalize()} MCP: {mcp_status}")
+
+# Check plugins
+def check_plugin(name):
+    try:
+        result = subprocess.run(
+            ['claude', 'plugins', 'list'],
+            capture_output=True,
+            text=True
+        )
+        return name.lower() in result.stdout.lower()
+    except:
+        return False
+
+serena_status = "✅ Installed" if check_plugin("serena") else "❌ Not installed"
+context7_status = "✅ Installed" if check_plugin("context7") else "⚠️  Not installed (optional)"
+
+print(f"Serena Plugin:  {serena_status}")
+print(f"Context7 Plugin: {context7_status}")
+print()
+
+print("Available Commands:")
+print("  /context_gather <task>  - Multi-source context retrieval")
+print("  /encode-repo-serena     - Repository encoding (requires Serena)")
+print("  /memory-search <query>  - Search memories")
+print("  /memory-list [count]    - List recent memories")
+print("  /memory-save            - Save current context")
+print("  /memory-explore <query> - Knowledge graph traversal")
+print("=" * 50)
 ```
 
-## Step 4: Quick Test (Optional)
+## Step 5: Quick Test (Optional)
 
 Offer to test the setup:
 
-**Test Forgetful:**
+**Test memory backend:**
 ```
 /memory-list
 ```
 
+If successful, you should see a list of recent memories (or empty if just set up).
+
 **Test Serena (if installed):**
-```
-Ask Claude to use Serena's get_symbols_overview on a file in your project
+```python
+# Quick Serena test
+mcp__plugin_serena_serena__get_current_config()
 ```
 
 **Test Context7 (if installed):**
@@ -137,17 +342,75 @@ Ask about a framework: "How does FastAPI dependency injection work?"
 
 ## Troubleshooting
 
-**Forgetful issues:**
+### Backend Issues
+
+**Graphiti connection failed:**
+- Verify server is running: `curl http://localhost:8000/health`
+- Check MCP config: `claude mcp list`
+- Review Claude Code logs for MCP errors
+- Verify endpoint in `.context-hub.yaml`
+
+**Forgetful connection failed:**
 - Check if `uvx` is installed: `which uvx`
 - For HTTP: verify server is running
-- Check Claude Code logs for MCP errors
+- Check MCP config: `claude mcp list`
+- Review Claude Code logs
 
-**Plugin issues:**
-- Re-run: `claude plugins install <plugin-name>`
-- Check marketplace: `claude plugins search <name>`
+### Plugin Issues
+
+**Serena not found:**
+```bash
+claude plugins install serena
+```
+
+**Context7 not found:**
+```bash
+claude plugins install context7 --marketplace pleaseai/claude-code-plugins
+```
+
+### Configuration Issues
+
+**Config file not found:**
+- Ensure `.context-hub.yaml` is in current directory, project root, or home directory
+- Check file permissions
+
+**Group ID not detected:**
+- Verify git repository exists: `git remote -v`
+- Override by setting `group_id: "your-project-name"` in config
+
+## Configuration Reference
+
+### Minimal Config (Graphiti)
+```yaml
+memory:
+  backend: "graphiti"
+  group_id: "auto"
+```
+
+### Minimal Config (Forgetful)
+```yaml
+memory:
+  backend: "forgetful"
+  group_id: "auto"
+```
+
+### Full Config Example
+```yaml
+memory:
+  backend: "graphiti"
+  group_id: "my-project"  # or "auto" for auto-detection
+
+  graphiti:
+    endpoint: "http://localhost:8000/mcp"
+
+  forgetful:
+    # Backend-specific settings (if using Forgetful)
+```
 
 ## Notes
 
-- Forgetful MCP config stored in `~/.claude.json` (persists across updates)
+- Configuration is searched in order: `./.context-hub.yaml`, `<project-root>/.context-hub.yaml`, `~/.context-hub.yaml`
+- MCP server configs are stored in `~/.claude.json` (persist across updates)
 - Serena and Context7 are plugins, not MCPs - install via `claude plugins install`
-- SQLite database location: `~/.forgetful/forgetful.db`
+- Group ID auto-detection uses: 1) git repo name, 2) directory name (fallback)
+- Both backends can coexist - switch by changing `backend` in config
