@@ -1,20 +1,20 @@
 ---
 name: serena-code-architecture
-description: Architectural analysis workflow using Serena symbols and Forgetful memory. Use when analyzing project structure, documenting architecture, creating component entities, or building knowledge graphs from code.
-allowed-tools: mcp__plugin_serena_serena__get_symbols_overview, mcp__plugin_serena_serena__find_symbol, mcp__plugin_serena_serena__find_referencing_symbols, mcp__plugin_serena_serena__list_dir, mcp__plugin_serena_serena__search_for_pattern, mcp__forgetful__execute_forgetful_tool
+description: Architectural analysis workflow using Serena symbols and memory adapter. Use when analyzing project structure, documenting architecture, or creating architectural memories from code.
+allowed-tools: mcp__plugin_serena_serena__get_symbols_overview, mcp__plugin_serena_serena__find_symbol, mcp__plugin_serena_serena__find_referencing_symbols, mcp__plugin_serena_serena__list_dir, mcp__plugin_serena_serena__search_for_pattern, Read, Glob
 ---
 
-# Architectural Analysis with Serena + Forgetful
+# Architectural Analysis with Serena + Memory Adapter
 
-This skill guides systematic architectural analysis using Serena's symbol-level understanding, with optional persistence to Forgetful's knowledge graph.
+This skill guides systematic architectural analysis using Serena's symbol-level understanding, with optional persistence to the memory adapter (Graphiti or Forgetful backend).
 
 ## When to Use This Skill
 
 - Analyzing a new codebase before implementing changes
 - Documenting existing architecture for a project
-- Creating component entities and relationships in Forgetful
+- Persisting architectural insights to memory
 - Understanding dependencies and call hierarchies
-- Building a knowledge graph from code structure
+- Building a knowledge graph from code structure (Graphiti auto-extracts entities)
 
 ## Analysis Workflow
 
@@ -97,82 +97,66 @@ mcp__plugin_serena_serena__find_symbol({
 
 ### Phase 5: Create Architectural Memories (Optional)
 
-Store findings in Forgetful:
+Store findings using the memory adapter:
 
 ```python
-# First, find/create the project
-execute_forgetful_tool("list_projects", {"repo_name": "owner/repo"})
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / 'lib'))
 
-# Create memory for architectural insight
-execute_forgetful_tool("create_memory", {
-  "title": "AuthService: Core authentication component",
-  "content": "AuthService handles JWT validation, user sessions, and OAuth flows. Dependencies: UserRepository, TokenService, CacheService. Used by: all API endpoints via middleware.",
-  "context": "Discovered during architectural analysis",
-  "keywords": ["auth", "jwt", "service", "architecture"],
-  "tags": ["architecture", "component"],
-  "importance": 8,
-  "project_ids": [PROJECT_ID]
-})
+from bridge import memory_save, memory_get_config
+
+# Check which backend is active
+config = memory_get_config()
+# Returns: {'backend': 'graphiti', 'group_id': 'your-project'}
+
+# Save architectural insight
+memory_id = memory_save(
+  content="AuthService handles JWT validation, user sessions, and OAuth flows. Dependencies: UserRepository, TokenService, CacheService. Used by: all API endpoints via middleware.",
+  title="AuthService: Core authentication component",
+  importance=8,  # Forgetful only, ignored by Graphiti
+  tags=["architecture", "component", "auth"]
+)
 ```
 
-### Phase 6: Entity Graph Creation (Optional)
+**Note**: Graphiti automatically extracts entities and relationships. Forgetful stores as tagged memory.
 
-Create entities for major components:
+### Phase 6: Exploring the Knowledge Graph (Optional)
+
+Explore relationships between components:
 
 ```python
-# Check if entity exists first
-execute_forgetful_tool("search_entities", {"query": "AuthService"})
+from bridge import memory_explore
 
-# Create component entity
-execute_forgetful_tool("create_entity", {
-  "name": "AuthService",
-  "entity_type": "other",
-  "custom_type": "Service",
-  "notes": "Core authentication service - JWT, OAuth, sessions",
-  "tags": ["service", "auth"],
-  "project_ids": [PROJECT_ID]
-})
+# Start from a component and traverse relationships
+graph = memory_explore("AuthService", depth=2)
 
-# Create relationships
-execute_forgetful_tool("create_entity_relationship", {
-  "source_entity_id": AUTH_SERVICE_ID,
-  "target_entity_id": USER_REPO_ID,
-  "relationship_type": "depends_on",
-  "strength": 0.9
-})
-
-# Link entity to memories
-execute_forgetful_tool("link_entity_to_memory", {
-  "entity_id": AUTH_SERVICE_ID,
-  "memory_id": ARCH_MEMORY_ID
-})
+# Returns:
+# {
+#   'nodes': [{'id': ..., 'content': ..., 'metadata': ...}],
+#   'edges': [{'source': ..., 'target': ..., 'type': 'depends_on'}]
+# }
 ```
 
-## Relationship Types
+**Graphiti** automatically creates entities and relationships from saved memories.
+**Forgetful** requires explicit entity/relationship creation (see `curating-memories` skill).
 
-Standard relationship types for architecture:
+## Architectural Patterns
 
-| Type | Use For |
-|------|---------|
-| `uses` | General usage (A uses B) |
-| `depends_on` | Dependency (A requires B) |
-| `calls` | Direct function/method calls |
-| `extends` | Class inheritance |
-| `implements` | Interface implementation |
-| `connects_to` | External connections (DB, API) |
-| `contains` | Composition (A contains B) |
+When saving architectural insights, include:
 
-## Entity Types for Architecture
+- **Component Purpose**: What the component does
+- **Dependencies**: What it requires/uses
+- **Dependents**: What uses it
+- **Patterns**: Design patterns employed
+- **External Connections**: APIs, databases, services
 
-| Type | Use For |
-|------|---------|
-| `Service` | Business logic services |
-| `Repository` | Data access layer |
-| `Controller` | Request handlers |
-| `Middleware` | Request/response processing |
-| `Model` | Data models/entities |
-| `Library` | External dependencies |
-| `Framework` | Framework components |
+Graphiti will automatically extract:
+- Entities (components, services, classes)
+- Relationships (depends_on, uses, extends, implements)
+- Temporal relationships (created_before, modified_after)
+
+Forgetful requires explicit tagging and later curation (see `curating-memories` skill).
 
 ## Example: FastAPI Project Analysis
 
@@ -204,15 +188,14 @@ mcp__plugin_serena_serena__find_referencing_symbols({
 })
 
 # 5. Create architecture memory
-execute_forgetful_tool("create_memory", {
-  "title": "FastAPI app structure: Routers + Dependencies",
-  "content": "App uses router-based organization with dependency injection. Routers: /users, /auth, /products. Dependencies: get_current_user, get_db. All routes require auth except /auth/login.",
-  "context": "FastAPI architecture analysis",
-  "keywords": ["fastapi", "router", "dependency-injection"],
-  "tags": ["architecture", "pattern"],
-  "importance": 8,
-  "project_ids": [PROJECT_ID]
-})
+from bridge import memory_save
+
+memory_id = memory_save(
+  content="App uses router-based organization with dependency injection. Routers: /users, /auth, /products. Dependencies: get_current_user, get_db. All routes require auth except /auth/login.",
+  title="FastAPI app structure: Routers + Dependencies",
+  importance=8,
+  tags=["architecture", "pattern", "fastapi"]
+)
 ```
 
 ## Analysis Checklist
@@ -223,14 +206,16 @@ execute_forgetful_tool("create_memory", {
 - [ ] Dependencies traced
 - [ ] External connections documented
 - [ ] Key patterns identified
-- [ ] Memories created for insights
-- [ ] Entities created for components (if applicable)
-- [ ] Relationships mapped (if applicable)
+- [ ] Architectural insights saved to memory
+- [ ] Knowledge graph explored (if needed)
 
 ## Tips
 
 1. **Work incrementally** - Don't try to analyze everything at once
 2. **Focus on interfaces** - Public methods/APIs matter more than internals
 3. **Document decisions** - Create memories for WHY, not just WHAT
-4. **Use entities sparingly** - Only major components, not every class
-5. **Link across projects** - Architecture patterns often apply elsewhere
+4. **Include context** - Dependencies, dependents, patterns
+5. **Tag consistently** - Use tags like "architecture", "component", "pattern"
+6. **Leverage backend strengths**:
+   - Graphiti: Rich content for entity extraction
+   - Forgetful: Structured tagging for later curation
