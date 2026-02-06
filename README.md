@@ -1,6 +1,6 @@
 # Context Hub Plugin
 
-Unified context retrieval for Claude Code - orchestrates **Forgetful Memory**, **Context7 documentation**, and **Serena symbol analysis** into a single context-gathering workflow.
+Unified context retrieval for Claude Code - orchestrates **Pluggable Memory Backend (Graphiti/Forgetful)**, **Context7 documentation**, and **Serena symbol analysis** into a single context-gathering workflow.
 
 ## Installation
 
@@ -12,6 +12,24 @@ Or install from local path:
 ```bash
 claude plugins install /path/to/context-hub-plugin
 ```
+
+## Configuration
+
+Context Hub supports pluggable memory backends. Create `.context-hub.yaml`:
+
+```yaml
+memory:
+  backend: "graphiti"  # or "forgetful"
+  group_id: "auto"     # auto-detect from git repo
+```
+
+**Supported Backends:**
+- **Graphiti**: Knowledge graph with automatic entity extraction (recommended)
+- **Forgetful**: Atomic memories with explicit linking
+
+Backend is auto-selected from config. Group ID is auto-detected from git repository.
+
+See [Migration Guide](docs/MIGRATION.md) for details.
 
 ## Prerequisites
 
@@ -44,12 +62,12 @@ This will:
 
 Context Hub includes auto-discovered skills that guide Claude on effective tool usage:
 
-### Forgetful Skills (included)
+### Memory Skills (included)
 | Skill | Description |
 |-------|-------------|
-| `using-forgetful-memory` | When/how to query and create memories, atomic memory principles, importance scoring |
-| `curating-memories` | Updating, linking, and marking memories obsolete |
-| `exploring-knowledge-graph` | Deep traversal across memories, entities, and relationships |
+| `using-memory-adapter` | When/how to query and save memories using pluggable backend (Graphiti/Forgetful) |
+| `curating-memories` | Updating, linking, and marking memories obsolete (Forgetful-specific) |
+| `exploring-knowledge-graph` | Deep traversal across the knowledge graph |
 
 ### Serena Skills
 | Skill | Description |
