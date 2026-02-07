@@ -3,9 +3,9 @@
   "description": "Unified context retrieval with pluggable memory backends (Graphiti/Forgetful), Context7 docs, and Serena symbol analysis",
   "version": "2.0.0",
   "author": {
-    "name": "Scott Raisbeck",
-    "url": "https://github.com/ScottRBK"
+    "name": "Eric Hole (fork of Scott Raisbeck)",
+    "url": "https://github.com/geojaz"
   },
   "license": "MIT",
-  "repository": "https://github.com/ScottRBK/context-hub-plugin"
+  "repository": "https://github.com/geojaz/context-hub-plugin"
 }

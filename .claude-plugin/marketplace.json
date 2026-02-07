@@ -31,14 +31,14 @@
       "name": "context-hub-plugin",
       "source": {
         "source": "github",
-        "repo": "ScottRBK/context-hub-plugin"
+        "repo": "geojaz/context-hub-plugin"
       },
       "description": "Unified context retrieval with pluggable memory backends (Graphiti/Forgetful), Context7 docs, and Serena symbol analysis",
       "version": "2.0.0",
       "author": {
-        "name": "Scott Raisbeck"
+        "name": "Eric Hole (fork of Scott Raisbeck)"
       },
-      "repository": "https://github.com/ScottRBK/context-hub-plugin",
+      "repository": "https://github.com/geojaz/context-hub-plugin",
       "license": "MIT",
       "keywords": [
         "context",
