@@ -38,8 +38,33 @@ class GraphitiBackend(Backend):
         }
     }
 
+    @staticmethod
+    def _check_mcp_available():
+        """
+        Check if MCP tools are available in the current execution context.
+
+        Raises:
+            RuntimeError: If MCP tools are not available with helpful guidance
+        """
+        try:
+            # Try to access a Graphiti MCP tool
+            _ = mcp__graphiti__get_status
+        except NameError:
+            raise RuntimeError(
+                "Graphiti MCP tools are not available in this execution context.\n\n"
+                "The memory adapter can only be used when Python code is executed "
+                "by Claude Code directly (e.g., via commands or skills).\n\n"
+                "If you're trying to test the adapter:\n"
+                "  1. Use the /memory-list, /memory-save, or /memory-search commands\n"
+                "  2. Call the bridge functions from within a Claude Code Python block\n"
+                "  3. Do NOT run Python scripts via Bash subprocess\n\n"
+                "For more info, see: README-lib.md"
+            )
+
     def query(self, query: str, group_id: str, limit: int) -> List[Memory]:
         """Search memories using Graphiti search_memory_nodes."""
+        self._check_mcp_available()
+        
         # Call actual MCP tool
         result = mcp__graphiti__search_nodes({
             "query": query,
@@ -51,6 +76,8 @@ class GraphitiBackend(Backend):
 
     def search_facts(self, query: str, group_id: str, limit: int) -> List[Relationship]:
         """Search relationships using Graphiti search_memory_facts."""
+        self._check_mcp_available()
+        
         result = mcp__graphiti__search_memory_facts({
             "query": query,
             "group_ids": [group_id],
@@ -61,6 +88,8 @@ class GraphitiBackend(Backend):
 
     def save(self, content: str, group_id: str, **metadata) -> str:
         """Save episode using Graphiti add_memory."""
+        self._check_mcp_available()
+        
         result = mcp__graphiti__add_memory({
             "name": metadata.get("title", "Untitled"),
             "episode_body": content,
@@ -82,6 +111,8 @@ class GraphitiBackend(Backend):
 
     def list_recent(self, group_id: str, limit: int) -> List[Memory]:
         """List recent episodes using get_episodes."""
+        self._check_mcp_available()
+        
         result = mcp__graphiti__get_episodes({
             "group_ids": [group_id],
             "max_episodes": limit

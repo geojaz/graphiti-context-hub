@@ -1,4 +1,16 @@
-# Forgetful Tool Reference
+# Forgetful-Specific Tools Reference
+
+**⚠️ IMPORTANT:** This reference is for **Forgetful backend only**. These advanced features are not available in Graphiti.
+
+**For standard memory operations (query, save, list, explore) that work with BOTH backends, see BRIDGE_REFERENCE.md**
+
+This document covers Forgetful-specific features:
+- Entity management (people, orgs, devices)
+- Project organization
+- Document storage
+- Code artifacts
+- Memory curation (mark obsolete, explicit linking)
+- Entity relationships
 
 Complete reference for all Forgetful MCP tools. Call via `execute_forgetful_tool(tool_name, args)`.
 

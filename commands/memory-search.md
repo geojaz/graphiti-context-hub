@@ -14,11 +14,6 @@ Use the memory adapter's `query` operation to search for memories.
 
 ## Implementation
 
-You have two options for searching:
-
-### Option A: Direct Python (if available)
-If you can execute Python in this context:
-
 ```python
 import sys
 from pathlib import Path
@@ -28,40 +23,22 @@ from bridge import memory_query, memory_get_config
 
 # Show current config
 config = memory_get_config()
-print(f"Using backend: {config['backend']}, group: {config['group_id']}")
+print(f"Using backend: {config['backend']}, group: {config['group_id']}\n")
 
 # Search
-results = memory_query("$ARGUMENTS", limit=10)
+query = "$ARGUMENTS"
+results = memory_query(query, limit=10)
 
 # Display results
-print(f"\nFound {len(results)} memories:\n")
+print(f"Found {len(results)} memories:\n")
 for i, memory in enumerate(results, 1):
-    print(f"{i}. {memory['metadata'].get('title', 'Untitled')}")
+    title = memory['metadata'].get('title', memory['content'][:50])
+    print(f"{i}. {title}")
     print(f"   {memory['content'][:100]}...")
+    print(f"   Created: {memory['created_at'][:10]}")
     if memory.get('importance'):
         print(f"   Importance: {memory['importance']}")
     print()
-```
-
-### Option B: MCP Tool Pattern (fallback)
-If Python execution isn't available, use the backend MCP tools directly based on config:
-
-**For Graphiti backend:**
-```
-mcp__graphiti__search_nodes({
-  "query": "$ARGUMENTS",
-  "group_ids": ["<detected-group-id>"],
-  "max_nodes": 10
-})
-```
-
-**For Forgetful backend:**
-```
-mcp__forgetful__execute_forgetful_tool("query_memory", {
-  "query": "$ARGUMENTS",
-  "k": 10,
-  "include_links": true
-})
 ```
 
 ## Response Format

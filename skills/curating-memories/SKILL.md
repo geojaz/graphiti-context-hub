@@ -5,6 +5,8 @@ description: Use when creating new memories to check for duplicates first, when 
 
 # Curating Memories
 
+**⚠️ FORGETFUL BACKEND ONLY:** This skill uses advanced curation features only available with Forgetful. Graphiti handles entity extraction, linking, and relevance automatically.
+
 Active curation keeps the knowledge base accurate and connected. Outdated memories pollute search results and reduce effectiveness.
 
 ## When to Update a Memory
