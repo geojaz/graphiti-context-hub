@@ -1,40 +1,18 @@
 {
-  "name": "forgetful-plugins",
+  "name": "geojaz-forgetful-plugins",
   "owner": {
-    "name": "Scott Raisbeck",
-    "email": "scott_raisbeck1337@hotmail.com"
+    "name": "eric hole",
+    "email": ""
   },
   "plugins": [
     {
-      "name": "forgetful-plugin",
-      "source": {
-        "source": "github",
-        "repo": "ScottRBK/forgetful-plugin"
-      },
-      "description": "Semantic memory for Claude Code using Zettelkasten principles",
-      "version": "1.1.1",
-      "author": {
-        "name": "Scott Raisbeck"
-      },
-      "repository": "https://github.com/ScottRBK/forgetful-plugin",
-      "license": "MIT",
-      "keywords": [
-        "memory",
-        "zettelkasten",
-        "mcp",
-        "forgetful",
-        "knowledge-base"
-      ],
-      "category": "productivity"
-    },
-    {
-      "name": "context-hub-plugin",
+      "name": "geojaz-context-hub-plugin",
       "source": {
         "source": "github",
         "repo": "geojaz/context-hub-plugin"
       },
       "description": "Unified context retrieval with pluggable memory backends (Graphiti/Forgetful), Context7 docs, and Serena symbol analysis",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "author": {
         "name": "Eric Hole (fork of Scott Raisbeck)"
       },
