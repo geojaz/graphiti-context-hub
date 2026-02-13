@@ -37,16 +37,15 @@ Install it with:
 Then re-run /encode-repo-serena
 ```
 
-Also verify memory backend is connected by testing:
+Also verify Graphiti MCP is connected:
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_get_config
-
-config = memory_get_config()
-print(f"Backend: {config['backend']}, Group: {config['group_id']}")
+# Test Graphiti connection
+try:
+    result = mcp__graphiti__get_status()
+    print("✅ Graphiti MCP server is connected")
+except Exception as e:
+    print(f"❌ Connection failed: {e}")
+    print("Run /context-hub-setup to configure Graphiti")
 ```
 
 If this errors, run `/context-hub-setup` first.
@@ -66,19 +65,19 @@ Parse for:
 
 | Profile | Phase 1 | Phase 1B | Phase 2 | Phase 2B | Phase 3 | Phase 4 | Phase 5 | Phase 6 | Phase 6B | Phase 7B | Total |
 |---------|---------|----------|---------|----------|---------|---------|---------|---------|----------|----------|-------|
-| Small Simple | 3-5 | 1 | 3-5 | 3-5 | 3-5 | 2-4 | 0-2 | 3-5 | 1 | 1 | 20-33 memories |
-| Small Complex | 5-7 | 1 | 5-8 | 5-10 | 5-8 | 4-6 | 0-3 | 5-8 | 1 | 1 | 32-52 memories |
-| Medium Standard | 5-10 | 1 | 10-15 | 10-20 | 8-12 | 5-10 | 0-5 | 5-10 | 1-2 | 1 | 46-86 memories |
-| Large | 8-12 | 2 | 15-20 | 20-40 | 12-18 | 10-15 | 0-8 | 8-15 | 2-4 | 1-2 | 78-136 memories |
+| Small Simple | 3-5 | 1 | 3-5 | 3-5 | 3-5 | 2-4 | 0-2 | 3-5 | 1 | 1 | 20-33 episodes |
+| Small Complex | 5-7 | 1 | 5-8 | 5-10 | 5-8 | 4-6 | 0-3 | 5-8 | 1 | 1 | 32-52 episodes |
+| Medium Standard | 5-10 | 1 | 10-15 | 10-20 | 8-12 | 5-10 | 0-5 | 5-10 | 1-2 | 1 | 46-86 episodes |
+| Large | 8-12 | 2 | 15-20 | 20-40 | 12-18 | 10-15 | 0-8 | 8-15 | 2-4 | 1-2 | 78-136 episodes |
 
 **Notes**:
-- All content stored as memories using bridge
-- Phase 1B creates 1-2 dependency memories per project
-- **Phase 2B is MANDATORY** - creates component memories documenting relationships
+- All content stored as episodes using Graphiti MCP
+- Phase 1B creates 1-2 dependency episodes per project
+- **Phase 2B is MANDATORY** - creates component episodes documenting relationships
 - Phase 5 is CONDITIONAL - only if explicit documentation exists (see Phase 5 guidelines)
-- **Phase 6 is MANDATORY** - minimum 3 code example memories for any project
-- Phase 6B creates Symbol Index memory - split by layer for large projects
-- Phase 7B creates Architecture Reference memory - split by layer for very large projects
+- **Phase 6 is MANDATORY** - minimum 3 code example episodes for any project
+- Phase 6B creates Symbol Index episode - split by layer for large projects
+- Phase 7B creates Architecture Reference episode - split by layer for very large projects
 
 ---
 
@@ -89,7 +88,7 @@ Parse for:
 After each phase, report:
 ```
 Phase [N] Complete:
-- Created: [X] memories, [Y] entities, [Z] artifacts
+- Created: [X] episodes (entities auto-extracted by Graphiti)
 - Minimum required: [targets from table above]
 - Status: ✅ Met / ❌ Not met (explain gaps)
 ```
@@ -98,11 +97,11 @@ Phase [N] Complete:
 - Phase 0: Discovery
 - Phase 1: Foundation
 - Phase 2: Architecture
-- **Phase 2B: Components** (minimum 3 component memories)
-- Phase 3: Patterns (minimum 3 pattern memories)
-- Phase 6: Code Examples (minimum 3 code example memories)
-- Phase 6B: Symbol Index (1 memory)
-- Phase 7B: Architecture Reference (1 memory)
+- **Phase 2B: Components** (minimum 3 component episodes)
+- Phase 3: Patterns (minimum 3 pattern episodes)
+- Phase 6: Code Examples (minimum 3 code example episodes)
+- Phase 6B: Symbol Index (1 episode)
+- Phase 7B: Architecture Reference (1 episode)
 
 **Conditional phases** (skip only if criteria not met):
 - Phase 1B: Dependencies (skip if single-file script with no deps)
@@ -143,18 +142,20 @@ mcp__plugin_serena_serena__list_dir({
 ```python
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+from lib.config import get_git_repo_name
 
-from bridge import memory_query, memory_get_config
+# Get group_id
+group_id = get_git_repo_name() or Path.cwd().name
+print(f"Group ID: {group_id}\n")
 
-config = memory_get_config()
-print(f"Backend: {config['backend']}, Group: {config['group_id']}\n")
-
-# Query existing memories
-results = memory_query("architecture patterns", limit=10)
-print(f"Found {len(results)} existing memories")
-for r in results:
-    print(f"  - {r['metadata'].get('title', 'Untitled')}")
+# Query existing episodes
+results = mcp__graphiti__search_memory_facts({
+    "query": "architecture patterns",
+    "group_ids": [group_id],
+    "max_facts": 10
+})
+print(f"Found {len(results)} existing facts")
 ```
 
 ### Step 4: Analyze Entry Points
@@ -169,7 +170,7 @@ mcp__plugin_serena_serena__read_file({"relative_path": "pyproject.toml"})
 ### Step 5: Gap Analysis
 
 Compare:
-- What's in Forgetful KB?
+- What's in Graphiti knowledge graph?
 - What exists in codebase?
 - What's missing?
 
@@ -177,79 +178,71 @@ Report findings before proceeding.
 
 ---
 
-## Phase 1: Project Foundation (5-10 memories)
+## Phase 1: Project Foundation (5-10 episodes)
 
-### Memory Adapter Setup
+### Get Group ID
 
-The memory adapter auto-detects the group_id from the git repo:
+Get the group_id from git repo:
 
 ```python
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+from lib.config import get_git_repo_name
 
-from bridge import memory_get_config
-
-config = memory_get_config()
-print(f"Backend: {config['backend']}")
-print(f"Group ID: {config['group_id']}")
+group_id = get_git_repo_name() or Path.cwd().name
+print(f"Group ID: {group_id}")
 ```
 
-### Create Foundation Memories
+### Create Foundation Episodes
 
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
 # 1. Project Overview
-memory_save(
-    content="[Project purpose, what problems it solves, main features]",
-    title="Project Overview",
-    importance=10,
-    keywords=["overview", "purpose"],
-    tags=["foundation"]
-)
+mcp__graphiti__add_memory({
+    "name": "Project Overview",
+    "episode_body": "[Project purpose, what problems it solves, main features]",
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "foundation"
+})
 
 # 2. Technology Stack
-memory_save(
-    content="Language: Python 3.12. Frameworks: FastAPI, Streamlit. Database: ClickHouse. ML: XGBoost.",
-    title="Technology Stack",
-    importance=9,
-    keywords=["tech-stack", "dependencies"],
-    tags=["foundation", "technology"]
-)
+mcp__graphiti__add_memory({
+    "name": "Technology Stack",
+    "episode_body": "Language: Python 3.12. Frameworks: FastAPI, Streamlit. Database: ClickHouse. ML: XGBoost.",
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "foundation"
+})
 
 # 3. Architecture Pattern
-memory_save(
-    content="6-layer architecture: Data→Domain→Processing→ML→Strategy→Presentation",
-    title="Architecture Pattern",
-    importance=10,
-    keywords=["architecture", "layers"],
-    tags=["foundation", "architecture"]
-)
+mcp__graphiti__add_memory({
+    "name": "Architecture Pattern",
+    "episode_body": "6-layer architecture: Data→Domain→Processing→ML→Strategy→Presentation",
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "foundation"
+})
 
 # 4. Development Setup
-memory_save(
-    content="[Setup instructions, environment requirements, how to run]",
-    title="Development Setup",
-    importance=8,
-    keywords=["setup", "development"],
-    tags=["foundation"]
-)
+mcp__graphiti__add_memory({
+    "name": "Development Setup",
+    "episode_body": "[Setup instructions, environment requirements, how to run]",
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "foundation"
+})
 
 # 5. Testing Strategy
-memory_save(
-    content="[Testing approach, frameworks used, how to run tests]",
-    title="Testing Strategy",
-    importance=8,
-    keywords=["testing", "qa"],
-    tags=["foundation"]
-)
+mcp__graphiti__add_memory({
+    "name": "Testing Strategy",
+    "episode_body": "[Testing approach, frameworks used, how to run tests]",
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "foundation"
+})
 
-print("✅ Created 5 foundation memories")
+print("✅ Created 5 foundation episodes")
 ```
 
 ---
@@ -306,31 +299,24 @@ Use Context7 to confirm:
 - No deprecated APIs being used
 - Best practices being followed
 
-### Step 4: Create Dependency Memory
+### Step 4: Create Dependency Episode
 
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
-memory_save(
-    content="""Language: [lang] [version]. Core frameworks: [list with roles].
+mcp__graphiti__add_memory({
+    "name": "[Project] - Dependencies and External Libraries",
+    "episode_body": """Language: [lang] [version]. Core frameworks: [list with roles].
 Data/storage: [databases]. HTTP/API: [frameworks].
 Dev tools: [testing, linting, build].
 Rationale: [why chosen, if documented].""",
-    title="[Project] - Dependencies and External Libraries",
-    context="Understanding technology choices and integration patterns",
-    keywords=["tech-stack", "dependencies", "frameworks", "libraries"],
-    tags=["technology", "foundation", "dependencies"],
-    importance=9
-)
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "dependency analysis"
+})
 ```
 
 ---
 
-## Phase 2: Symbol-Level Architecture (10-15 memories)
+## Phase 2: Symbol-Level Architecture (10-15 episodes)
 
 **This is where Serena shines.**
 
@@ -372,92 +358,76 @@ This reveals:
 - Where is this class used?
 - What depends on what?
 
-### Step 4: Create Architecture Memories
+### Step 4: Create Architecture Episodes
 
 For each architectural layer discovered:
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
-memory_save(
-    content="Key symbols: [list]. Relationships: [discovered references]. Pattern: [identified pattern].",
-    title="[Project] - [Layer] Architecture",
-    context="Discovered via Serena symbol analysis",
-    importance=8,
-    keywords=["architecture", "layer-name"],
-    tags=["architecture"]
-)
+mcp__graphiti__add_memory({
+    "name": "[Project] - [Layer] Architecture",
+    "episode_body": "Key symbols: [list]. Relationships: [discovered references]. Pattern: [identified pattern].",
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "Serena symbol analysis"
+})
 ```
 
 ---
 
-## Phase 2B: Component Relationships (via Memories)
+## Phase 2B: Component Relationships (via Episodes)
 
-**Purpose**: Document project components and their relationships using the bridge.
+**Purpose**: Document project components and their relationships using Graphiti.
 
-Components are captured through memories. Entity extraction is automatic:
-- **Graphiti**: Extracts entities automatically from memory content
-- **Forgetful**: Requires manual entity creation (see Advanced Features section)
+Components are captured through episodes. Graphiti automatically extracts entities and relationships from episode content.
 
 ### Minimum Requirements
 
-| Project Size | Component Memories |
+| Project Size | Component Episodes |
 |--------------|-------------------|
 | Small | 3-5 |
 | Medium | 10-20 |
 | Large | 20-40 |
 
-### Create Component Memories
+### Create Component Episodes
 
 Document major components discovered via Serena:
 
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
-# Component memory example
-memory_save(
-    content="""AuthenticationService handles token validation and user context injection.
+# Component episode example
+mcp__graphiti__add_memory({
+    "name": "[Project] - AuthenticationService Component",
+    "episode_body": """AuthenticationService handles token validation and user context injection.
 Location: src/services/auth.py
 Dependencies: FastAPI, JWT library
 Used by: All API endpoints requiring auth
 Reference count: 42 (high usage across codebase)
 Key methods: validate_token(), get_user_context()""",
-    title="[Project] - AuthenticationService Component",
-    context="Core service for authentication",
-    keywords=["component", "auth", "service", "authentication"],
-    tags=["component", "auth"],
-    importance=8
-)
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "component analysis"
+})
 
-# Framework/library memory example
-memory_save(
-    content="""FastAPI is the core HTTP framework.
+# Framework/library episode example
+mcp__graphiti__add_memory({
+    "name": "[Project] - FastAPI Framework Integration",
+    "episode_body": """FastAPI is the core HTTP framework.
 Version: 0.104.1
 Used for: REST API endpoints, WebSocket connections
 Integration: Dependency injection via Depends()
 Major components using it: All service endpoints""",
-    title="[Project] - FastAPI Framework Integration",
-    context="Core framework for HTTP layer",
-    keywords=["framework", "fastapi", "api", "http"],
-    tags=["framework", "dependency"],
-    importance=8
-)
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "framework integration"
+})
 ```
 
 ### Document Relationships
 
-Use content to capture relationships:
+Capture relationships in episode content (Graphiti extracts them automatically):
 
 ```python
-memory_save(
-    content="""Component dependencies in [Project]:
+mcp__graphiti__add_memory({
+    "name": "[Project] - Component Dependency Graph",
+    "episode_body": """Component dependencies in [Project]:
 
 AuthenticationService → FastAPI (uses for routing)
 DataService → PostgreSQL (connects for storage)
@@ -468,27 +438,26 @@ Relationship strengths based on Serena reference counts:
 - High usage (30+ refs): AuthenticationService→FastAPI
 - Medium usage (10-30 refs): DataService→PostgreSQL
 - Low usage (<10 refs): MLPipeline→XGBoost""",
-    title="[Project] - Component Dependency Graph",
-    context="How components connect and depend on each other",
-    keywords=["dependencies", "relationships", "components", "architecture"],
-    tags=["architecture", "relationships"],
-    importance=9
-)
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "relationship analysis"
+})
 ```
 
 ### Phase 2B Completion Checkpoint
 
 ```
 Phase 2B Complete:
-- Component memories created: [count] (minimum 3-5)
-- Relationship memory created: 1
+- Component episodes created: [count] (minimum 3-5)
+- Relationship episode created: 1
 - Key components documented: [list]
+- Entities auto-extracted by Graphiti
 - Status: ✅ Met minimum / ❌ Not met (create more before proceeding)
 ```
 
 ---
 
-## Phase 3: Pattern Discovery (8-12 memories, minimum 3)
+## Phase 3: Pattern Discovery (8-12 episodes, minimum 3)
 
 **Purpose**: Document recurring implementation patterns that define how the codebase works.
 
@@ -578,27 +547,20 @@ mcp__plugin_serena_serena__find_referencing_symbols({
 })
 ```
 
-### Create Pattern Memories
+### Create Pattern Episodes
 
 For each significant pattern (used 3+ times):
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
-memory_save(
-    content="""Pattern: [name]. Used for: [purpose].
+mcp__graphiti__add_memory({
+    "name": "[Project] - [Pattern Name] Pattern",
+    "episode_body": """Pattern: [name]. Used for: [purpose].
 Locations: [list files/classes using it].
 Implementation: [brief description of how it works].
 Usage count: [X] occurrences across codebase.""",
-    title="[Project] - [Pattern Name] Pattern",
-    context="Recurring implementation pattern for [purpose]",
-    keywords=["pattern", "<pattern-name>", "<domain>"],
-    tags=["pattern", "implementation"],
-    importance=7
-)
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "pattern analysis"
+})
 ```
 
 ### Phase 3 Completion Checkpoint
@@ -607,11 +569,11 @@ Usage count: [X] occurrences across codebase.""",
 Phase 3 Complete:
 - Patterns searched: [list categories checked]
 - Patterns documented: [count] (minimum 3)
-- Pattern memories created: [list titles]
+- Pattern episodes created: [list titles]
 - Status: ✅ Met minimum / ❌ Not met (continue searching)
 ```
 
-**Minimum 3 pattern memories required.** If fewer than 3 patterns found, document whatever exists (even basic ones like "error handling approach").
+**Minimum 3 pattern episodes required.** If fewer than 3 patterns found, document whatever exists (even basic ones like "error handling approach").
 
 ---
 
@@ -676,28 +638,21 @@ mcp__plugin_serena_serena__find_referencing_symbols({
 })
 ```
 
-### Create Feature Memories
+### Create Feature Episodes
 
 For each major feature:
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
-memory_save(
-    content="""Feature: [user-facing description].
+mcp__graphiti__add_memory({
+    "name": "[Project] - [Feature Name] Implementation",
+    "episode_body": """Feature: [user-facing description].
 Entry point: [file:function].
 Flow: [step-by-step through components].
 Key components: [list classes/functions involved].
 Configuration: [relevant settings if any].""",
-    title="[Project] - [Feature Name] Implementation",
-    context="Implementation details for [feature purpose]",
-    keywords=["feature", "<feature-name>", "implementation"],
-    tags=["feature", "implementation"],
-    importance=8
-)
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "feature analysis"
+})
 ```
 
 ### Phase 4 Completion Checkpoint
@@ -705,7 +660,7 @@ Configuration: [relevant settings if any].""",
 ```
 Phase 4 Complete:
 - Features identified: [count]
-- Feature memories created: [count] (minimum 3 for projects with 3+ features)
+- Feature episodes created: [count] (minimum 3 for projects with 3+ features)
 - Feature flows traced: [list]
 - Status: ✅ Met / ⚠️ Fewer than 3 features exist (acceptable)
 ```
@@ -720,14 +675,14 @@ Phase 4 Complete:
 
 ### What Counts as "Documented"
 
-✅ **DO create decision memories for**:
+✅ **DO create decision episodes for**:
 - ADRs (Architecture Decision Records) in `docs/adr/` or similar
 - README sections titled "Why X", "Rationale", "Design Decisions"
 - Code comments explicitly stating "We chose X because Y"
 - CONTRIBUTING.md or DESIGN.md files explaining choices
 - Commit messages or PR descriptions linked from docs
 
-❌ **DO NOT create decision memories for**:
+❌ **DO NOT create decision episodes for**:
 - Inferred decisions (e.g., "They use PostgreSQL so they must value ACID")
 - Technology choices without documented rationale
 - Patterns you observe but aren't explained
@@ -762,25 +717,18 @@ mcp__plugin_serena_serena__search_for_pattern({
 ### Phase 5 Outcomes
 
 **If documentation found**:
-Create 1 memory per documented decision:
+Create 1 episode per documented decision:
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
-memory_save(
-    content="""Decision: [what was decided].
+mcp__graphiti__add_memory({
+    "name": "[Project] - Decision: [Topic]",
+    "episode_body": """Decision: [what was decided].
 Alternatives considered: [if documented].
 Rationale: [QUOTE from documentation].
 Source: [file path and line number].""",
-    title="[Project] - Decision: [Topic]",
-    context="Documented design decision from [source file]",
-    keywords=["decision", "architecture", "rationale", "<topic>"],
-    tags=["decision", "documented"],
-    importance=8
-)
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "documented decision"
+})
 ```
 
 **If NO documentation found**:
@@ -791,7 +739,7 @@ Phase 5 Complete:
 - Status: ✅ SKIPPED (no explicit documentation)
 ```
 
-**DO NOT** create decision memories based on inference. This pollutes the knowledge base with assumptions.
+**DO NOT** create decision episodes based on inference. This pollutes the knowledge base with assumptions.
 
 ---
 
@@ -799,7 +747,7 @@ Phase 5 Complete:
 
 **Purpose**: Store reusable code patterns that enable an agent to understand HOW the codebase works, not just WHAT exists.
 
-**THIS PHASE IS MANDATORY** - Minimum 3 code example memories for any project.
+**THIS PHASE IS MANDATORY** - Minimum 3 code example episodes for any project.
 
 ### Why Code Examples Matter
 
@@ -835,19 +783,14 @@ mcp__plugin_serena_serena__find_symbol({
 })
 ```
 
-### Create Code Example Memories
+### Create Code Example Episodes
 
 For each key pattern/utility:
 
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
-memory_save(
-    content="""# Async Generator Pattern (Python)
+mcp__graphiti__add_memory({
+    "name": "[Project] - Async Generator Pattern (Python)",
+    "episode_body": """# Async Generator Pattern (Python)
 
 What: Streams data chunks asynchronously without loading entire dataset in memory.
 When: Processing large datasets that don't fit in RAM.
@@ -869,12 +812,10 @@ async def stream_results(self, query: str) -> AsyncGenerator[Batch, None]:
 ```
 
 Referenced by: MLPipeline, DataExporter, ReportGenerator (Serena ref count: 15)""",
-    title="[Project] - Async Generator Pattern (Python)",
-    context="Core pattern for memory-efficient data streaming",
-    keywords=["code", "pattern", "async", "generator", "streaming"],
-    tags=["pattern", "code", "example"],
-    importance=8
-)
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "code example"
+})
 ```
 
 ### Recommended Examples by Project Type
@@ -907,7 +848,7 @@ Referenced by: MLPipeline, DataExporter, ReportGenerator (Serena ref count: 15)"
 
 ```
 Phase 6 Complete:
-- Code example memories created: [count] (minimum 3)
+- Code example episodes created: [count] (minimum 3)
 - Examples by category: [patterns: X, interfaces: Y, utilities: Z]
 - Example titles: [list]
 - Status: ✅ Met minimum / ❌ Not met (create more before proceeding)
@@ -917,9 +858,9 @@ Phase 6 Complete:
 
 ---
 
-## Phase 6B: Symbol Index Memory
+## Phase 6B: Symbol Index Episode
 
-**Purpose**: Compile Serena's LSP symbol analysis into a permanent, searchable memory.
+**Purpose**: Compile Serena's LSP symbol analysis into a permanent, searchable episode.
 
 This captures symbol locations, relationships, and reference counts that would otherwise be lost when Serena is not active.
 
@@ -931,17 +872,12 @@ Collect from all `get_symbols_overview` and `find_symbol` calls during Phase 2:
 - Key functions with callers (from `find_referencing_symbols`)
 - Reference counts for each symbol
 
-### Step 2: Create Symbol Index Memory
+### Step 2: Create Symbol Index Episode
 
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
-memory_save(
-    content="""# [Project] - Symbol Index
+mcp__graphiti__add_memory({
+    "name": "[Project] - Symbol Index",
+    "episode_body": """# [Project] - Symbol Index
 
 Generated: [date]
 Total: X classes, Y interfaces, Z functions
@@ -977,77 +913,63 @@ Total: X classes, Y interfaces, Z functions
 ## Key Interfaces (by implementation count)
 1. BaseRepository - 3 implementations
 2. Handler - 2 implementations""",
-    title="[Project] - Symbol Index",
-    context="LSP-accurate symbol listing with locations and relationships",
-    keywords=["symbols", "classes", "functions", "navigation", "index"],
-    tags=["reference", "navigation", "symbol-index"],
-    importance=8
-)
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "symbol index"
+})
 ```
 
 ### Size Guidelines
 
-| Project Size | Est. Symbols | Memory Size | Strategy |
+| Project Size | Est. Symbols | Episode Size | Strategy |
 |--------------|--------------|-------------|----------|
-| Small | <50 | <2000 words | Single memory |
-| Medium | 50-150 | 2000-5000 words | Single memory |
+| Small | <50 | <2000 words | Single episode |
+| Medium | 50-150 | 2000-5000 words | Single episode |
 | Large | 150+ | >5000 words | Split by layer |
 
 **If splitting** (large projects):
-- Create separate memories per architectural layer
+- Create separate episodes per architectural layer
 - Example: `[Project] - Symbol Index: Data Layer`, `[Project] - Symbol Index: API Layer`
-- Each split gets separate memory with layer-specific symbols
+- Each split gets separate episode with layer-specific symbols
 
 ---
 
-## Phase 7: Additional Reference Memories (as needed)
+## Phase 7: Additional Reference Episodes (as needed)
 
-For content >400 words (detailed guides, comprehensive analysis), save as long-form memories:
+For content >400 words (detailed guides, comprehensive analysis), save as long-form episodes:
 
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
-memory_save(
-    content="<full documentation>",
-    title="[Project] - [Topic] Reference",
-    context="Comprehensive guide for [topic]",
-    keywords=["documentation", "guide", "reference"],
-    tags=["reference", "documentation"],
-    importance=8
-)
+mcp__graphiti__add_memory({
+    "name": "[Project] - [Topic] Reference",
+    "episode_body": "<full documentation>",
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "reference documentation"
+})
 ```
 
 ---
 
-## Phase 7B: Architecture Reference Memory
+## Phase 7B: Architecture Reference Episode
 
-**Purpose**: Consolidate architecture analysis into a comprehensive reference memory that persists Serena's insights.
+**Purpose**: Consolidate architecture analysis into a comprehensive reference episode that persists Serena's insights.
 
 This creates the definitive architecture reference, accessible even when Serena is not active.
 
 ### Step 1: Synthesize Architecture Content
 
 Combine insights from:
-- Phase 2 architecture memories (symbol-level analysis)
+- Phase 2 architecture episodes (symbol-level analysis)
 - Phase 2B component relationships
 - Phase 3 pattern discoveries
 - Serena's `find_referencing_symbols` relationship data
 
-### Step 2: Create Architecture Reference Memory
+### Step 2: Create Architecture Reference Episode
 
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
-
-from bridge import memory_save
-
-memory_save(
-    content="""# [Project] - Architecture Reference
+mcp__graphiti__add_memory({
+    "name": "[Project] - Architecture Reference",
+    "episode_body": """# [Project] - Architecture Reference
 
 Generated: [date]
 
@@ -1113,22 +1035,20 @@ Unit tests in tests/ directory. Integration tests use pytest fixtures.
 ## Design Decisions
 
 [Only if documented in repo - from Phase 5]""",
-    title="[Project] - Architecture Reference",
-    context="Comprehensive architecture documentation from Serena analysis",
-    keywords=["architecture", "layers", "patterns", "design", "structure"],
-    tags=["architecture", "reference", "foundation"],
-    importance=9
-)
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "architecture reference"
+})
 ```
 
 ### Size Guidelines
 
 - **Target**: 3000-8000 words
-- **If exceeding 8000 words**, split into multiple memories:
+- **If exceeding 8000 words**, split into multiple episodes:
   - `[Project] - Architecture Reference: Data Layer`
   - `[Project] - Architecture Reference: ML Layer`
   - `[Project] - Architecture Reference: API Layer`
-- Each split memory covers one architectural concern
+- Each split episode covers one architectural concern
 
 ---
 
@@ -1143,13 +1063,13 @@ Execute in order: 0 → 1 → 1B → 2 → **2B** → 3 → 4 → 5 → **6** �
 | Phase | Minimum Output | Gate |
 |-------|---------------|------|
 | 0: Discovery | Gap analysis report | Report before proceeding |
-| 1: Foundation | 5 memories | All 5 core memories |
-| 2: Architecture | Layer memories | 1 per architectural layer |
-| **2B: Components** | **3+ component memories** | **Component count met** |
-| 3: Patterns | **3+ pattern memories** | Pattern count met |
-| **6: Code Examples** | **3+ code example memories** | **Example count met** |
-| 6B: Symbol Index | 1 memory | Memory created |
-| 7B: Architecture Reference | 1 memory | Memory created |
+| 1: Foundation | 5 episodes | All 5 core episodes |
+| 2: Architecture | Layer episodes | 1 per architectural layer |
+| **2B: Components** | **3+ component episodes** | **Component count met** |
+| 3: Patterns | **3+ pattern episodes** | Pattern count met |
+| **6: Code Examples** | **3+ code example episodes** | **Example count met** |
+| 6B: Symbol Index | 1 episode | Episode created |
+| 7B: Architecture Reference | 1 episode | Episode created |
 
 ### Conditional Phases
 
@@ -1168,21 +1088,21 @@ Execute in order: 0 → 1 → 1B → 2 → **2B** → 3 → 4 → 5 → **6** �
 4. **Track relationships** - find_referencing_symbols is powerful
 5. **Aggregate symbol data** - Collect during Phase 2 for Phase 6B
 6. **Use Context7** - Validate framework usage assumptions
-7. **Update outdated memories** as discovered
-8. **Mark obsolete** - Memories that reference removed code
+7. **Update outdated episodes** as discovered
+8. **Delete obsolete episodes** - Episodes that reference removed code
 9. **Phase 5 is documentation-only** - Never infer decisions from code
-10. **Use only bridge methods** - memory_save(), memory_query(), memory_get_config()
+10. **Use Graphiti MCP directly** - mcp__graphiti__add_memory(), mcp__graphiti__search_memory_facts()
 
 ## Quality Principles
 
 - **Symbol-accurate**: Use LSP data, not guesses
 - **Relationship-aware**: Document how things connect
-- **One concept per memory** (atomic)
-- **200-400 words ideal** per memory
-- **Include context field** explaining relevance
-- **Honest importance scoring** (most should be 7-8)
+- **One concept per episode** (atomic)
+- **200-400 words ideal** per episode
+- **Use descriptive episode names**
 - **Quality over quantity**
 - **Only document what's explicitly in the repo** (especially for decisions)
+- **Let Graphiti extract entities** - No manual entity creation needed
 
 ---
 
@@ -1190,35 +1110,44 @@ Execute in order: 0 → 1 → 1B → 2 → **2B** → 3 → 4 → 5 → **6** �
 
 After completion, verify coverage:
 
-### Test Memories
+### Test Episodes
 
 ```python
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
+from lib.config import get_git_repo_name
 
-from bridge import memory_query
+group_id = get_git_repo_name() or Path.cwd().name
 
 # Test basic queries
-results = memory_query("How do I add a new API endpoint?", limit=5)
-print(f"Found {len(results)} results for endpoint query")
-for r in results:
-    print(f"  - {r['metadata'].get('title', 'Untitled')}")
+results = mcp__graphiti__search_memory_facts({
+    "query": "How do I add a new API endpoint?",
+    "group_ids": [group_id],
+    "max_facts": 5
+})
+print(f"Found {len(results)} facts for endpoint query")
 
-results = memory_query("What dependencies does this project use?", limit=5)
-print(f"Found {len(results)} results for dependency query")
-for r in results:
-    print(f"  - {r['metadata'].get('title', 'Untitled')}")
+results = mcp__graphiti__search_memory_facts({
+    "query": "What dependencies does this project use?",
+    "group_ids": [group_id],
+    "max_facts": 5
+})
+print(f"Found {len(results)} facts for dependency query")
 
-results = memory_query("architecture patterns", limit=10)
-print(f"Found {len(results)} architecture memories")
-for r in results:
-    print(f"  - {r['metadata'].get('title', 'Untitled')}")
+results = mcp__graphiti__search_memory_facts({
+    "query": "architecture patterns",
+    "group_ids": [group_id],
+    "max_facts": 10
+})
+print(f"Found {len(results)} architecture facts")
 
-results = memory_query("code examples async", limit=5)
-print(f"Found {len(results)} code example memories")
-for r in results:
-    print(f"  - {r['metadata'].get('title', 'Untitled')}")
+results = mcp__graphiti__search_memory_facts({
+    "query": "code examples async",
+    "group_ids": [group_id],
+    "max_facts": 5
+})
+print(f"Found {len(results)} code example facts")
 ```
 
 Test with architecture questions - Serena-encoded repos should answer accurately.
@@ -1230,7 +1159,7 @@ Test with architecture questions - Serena-encoded repos should answer accurately
 After each phase, report using the checkpoint format:
 ```
 Phase [N] Complete:
-- Created: [X] memories, [Y] entities, [Z] artifacts
+- Created: [X] episodes (entities auto-extracted by Graphiti)
 - Minimum required: [targets from table]
 - Status: ✅ Met / ❌ Not met
 ```
@@ -1246,35 +1175,35 @@ When encoding is complete, provide a summary in this format:
 ```
 # [Project] Encoding Complete
 
-## Memories Created
+## Episodes Created
 
 | Type | Count | Minimum | Status |
 |------|-------|---------|--------|
-| Foundation memories | [X] | 5 | ✅/❌ |
-| Architecture memories | [Y] | [per layer] | ✅/❌ |
-| Component memories | [Z] | 3+ | ✅/❌ |
-| Pattern memories | [W] | 3+ | ✅/❌ |
-| Feature memories | [V] | 3+ | ✅/❌ |
-| Code example memories | [U] | 3+ | ✅/❌ |
-| Reference memories | [T] | 2+ | ✅/❌ |
+| Foundation episodes | [X] | 5 | ✅/❌ |
+| Architecture episodes | [Y] | [per layer] | ✅/❌ |
+| Component episodes | [Z] | 3+ | ✅/❌ |
+| Pattern episodes | [W] | 3+ | ✅/❌ |
+| Feature episodes | [V] | 3+ | ✅/❌ |
+| Code example episodes | [U] | 3+ | ✅/❌ |
+| Reference episodes | [T] | 2+ | ✅/❌ |
 
 ## Phase Completion Status
 
 | Phase | Status | Output |
 |-------|--------|--------|
 | 0: Discovery | ✅ | Gap analysis completed |
-| 1: Foundation | ✅ | [X] memories |
+| 1: Foundation | ✅ | [X] episodes |
 | 1B: Dependencies | ✅/SKIP | [reason] |
-| 2: Architecture | ✅ | [X] layer memories |
-| 2B: Components | ✅ | [X] component memories |
-| 3: Patterns | ✅ | [X] pattern memories |
-| 4: Features | ✅/SKIP | [X] feature memories |
+| 2: Architecture | ✅ | [X] layer episodes |
+| 2B: Components | ✅ | [X] component episodes |
+| 3: Patterns | ✅ | [X] pattern episodes |
+| 4: Features | ✅/SKIP | [X] feature episodes |
 | 5: Decisions | ✅/SKIP | [X] decisions (or: no documentation found) |
-| 6: Code Examples | ✅ | [X] code example memories |
-| 6B: Symbol Index | ✅ | Symbol index memory |
-| 7B: Architecture | ✅ | Architecture reference memory |
+| 6: Code Examples | ✅ | [X] code example episodes |
+| 6B: Symbol Index | ✅ | Symbol index episode |
+| 7B: Architecture | ✅ | Architecture reference episode |
 
-## Key Memories for Navigation
+## Key Episodes for Navigation
 
 1. **Overview**: [title]
 2. **Architecture Reference**: [title]
@@ -1286,6 +1215,7 @@ When encoding is complete, provide a summary in this format:
 Components documented: [list]
 Frameworks documented: [list]
 Key relationships: [brief summary from dependency graph]
+Entities extracted by Graphiti: [estimated count]
 
 ## Validation Queries Tested
 
@@ -1299,129 +1229,10 @@ This summary confirms the encoding meets minimum requirements and provides quick
 
 ---
 
-## Advanced: Forgetful-Only Features
+## Notes on Graphiti
 
-**NOTE**: The following features are ONLY available when using the Forgetful backend. The main workflow above works with BOTH backends using only bridge methods.
-
-If you need these advanced features, you must be using Forgetful backend AND call the MCP tools directly (outside the bridge).
-
-### Project Notes (Forgetful Only)
-
-Forgetful supports project-level metadata for instant context:
-
-```python
-# Get project_id first
-from bridge import memory_get_config
-config = memory_get_config()
-
-if config['backend'] == 'forgetful':
-    # Get or create project
-    result = execute_forgetful_tool("list_projects", {})
-    project_id = None
-    for project in result.get("projects", []):
-        if project.get("name") == config['group_id']:
-            project_id = project.get("id")
-            break
-
-    if not project_id:
-        create_result = execute_forgetful_tool("create_project", {
-            "name": config['group_id'],
-            "description": "Project description",
-            "project_type": "development"
-        })
-        project_id = create_result.get("project_id")
-
-    # Update project notes
-    execute_forgetful_tool("update_project", {
-        "project_id": project_id,
-        "notes": """Entry: python3 -m ProjectName.main
-Tech: Python 3.12, FastAPI, PostgreSQL
-Architecture: 6-layer (Data→Domain→Processing→ML→Strategy→Presentation)
-Key patterns: Repository, Async generators, Dependency injection"""
-    })
-```
-
-### Entity Graph (Forgetful Only)
-
-Forgetful supports explicit entity and relationship creation:
-
-```python
-if config['backend'] == 'forgetful':
-    # Create entity
-    entity_result = execute_forgetful_tool("create_entity", {
-        "name": "AuthenticationService",
-        "entity_type": "other",
-        "custom_type": "Service",
-        "notes": "Centralized auth service. Location: src/services/auth.py",
-        "tags": ["service", "auth"],
-        "aka": ["AuthService", "auth_service"],
-        "project_ids": [project_id]
-    })
-    entity_id = entity_result.get("entity_id")
-
-    # Create relationship
-    execute_forgetful_tool("create_entity_relationship", {
-        "source_entity_id": entity_id,
-        "target_entity_id": library_id,
-        "relationship_type": "uses",
-        "strength": 1.0,
-        "metadata": {"role": "HTTP framework"}
-    })
-
-    # Link entity to memory
-    execute_forgetful_tool("link_entity_to_memory", {
-        "entity_id": entity_id,
-        "memory_id": memory_id
-    })
-```
-
-**Note**: Graphiti extracts entities automatically from memory content. No explicit entity creation needed.
-
-### Code Artifacts (Forgetful Only)
-
-Forgetful supports dedicated code artifact storage:
-
-```python
-if config['backend'] == 'forgetful':
-    execute_forgetful_tool("create_code_artifact", {
-        "title": "[Project] - Async Generator Pattern (Python)",
-        "description": "Memory-efficient data streaming pattern",
-        "code": "<full code implementation>",
-        "language": "python",
-        "tags": ["pattern", "async"],
-        "project_id": project_id
-    })
-```
-
-**Note**: For cross-backend compatibility, the main workflow uses memory_save() with code in markdown blocks instead.
-
-### Documents (Forgetful Only)
-
-Forgetful supports long-form documents with linking:
-
-```python
-if config['backend'] == 'forgetful':
-    # Create document
-    doc_result = execute_forgetful_tool("create_document", {
-        "title": "[Project] - Symbol Index",
-        "description": "LSP-accurate symbol listing",
-        "content": "<full markdown content>",
-        "document_type": "markdown",
-        "project_id": project_id,
-        "tags": ["symbol-index", "reference"]
-    })
-    doc_id = doc_result.get("document_id")
-
-    # Create entry memory linked to document
-    execute_forgetful_tool("create_memory", {
-        "title": "[Project] - Symbol Index Reference",
-        "content": "Symbol index summary. Full index in linked document.",
-        "keywords": ["symbols", "index"],
-        "tags": ["reference"],
-        "importance": 8,
-        "project_ids": [project_id],
-        "document_ids": [doc_id]
-    })
-```
-
-**Note**: For cross-backend compatibility, the main workflow uses memory_save() for long-form content instead.
+- **Automatic entity extraction**: Graphiti automatically extracts entities and relationships from episode content
+- **No manual linking required**: Just add descriptive episodes with clear relationships in the text
+- **Group ID scoping**: All episodes are scoped to the project's group_id for isolation
+- **Search capabilities**: Use search_memory_facts for semantic search across episodes
+- **Knowledge graph**: Graphiti builds a knowledge graph automatically from episode content
