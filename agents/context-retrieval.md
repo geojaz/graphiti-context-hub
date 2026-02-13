@@ -1,6 +1,6 @@
 ---
 name: context-retrieval
-description: Context retrieval specialist for gathering relevant memories, code patterns, and framework documentation. Uses memory adapter (Graphiti/Forgetful) for cross-project knowledge search.
+description: Context retrieval specialist for gathering relevant memories, code patterns, and framework documentation. Uses Graphiti knowledge graph for cross-project knowledge search.
 tools: mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch, WebFetch, Read, Glob, Grep
 model: sonnet
 ---
@@ -13,30 +13,66 @@ The main agent is about to plan or implement something. Your job is to gather RE
 
 ## Four-Source Strategy
 
-### 1. Memory Backend (Primary Source)
+### 1. Graphiti Knowledge Graph (Primary Source)
 
-**Query across ALL projects** - Memory adapter handles backend selection:
+**Query the knowledge graph** using Graphiti MCP tools:
 
 ```python
-import sys
+import yaml
 from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
+import subprocess
 
-from bridge import memory_query, memory_get_config
+# Load config and detect group_id
+config_path = Path.cwd() / '.context-hub.yaml'
+if config_path.exists():
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+else:
+    config = {'graphiti': {'group_id': 'auto'}}
 
-# Check which backend is active
-config = memory_get_config()
-# Backend: graphiti or forgetful
-# Group: auto-detected from git repo
+group_id_setting = config.get('graphiti', {}).get('group_id', 'auto')
 
-# Search for relevant memories
-memories = memory_query("<your search query>", limit=10)
+# Detect group_id
+if group_id_setting == 'auto':
+    try:
+        result = subprocess.run(
+            ['git', 'remote', 'get-url', 'origin'],
+            capture_output=True,
+            text=True,
+            cwd=Path.cwd()
+        )
+        if result.returncode == 0:
+            remote = result.stdout.strip()
+            if '/' in remote:
+                group_id = remote.split('/')[-1].replace('.git', '')
+            else:
+                group_id = Path.cwd().name
+        else:
+            group_id = Path.cwd().name
+    except:
+        group_id = Path.cwd().name
+else:
+    group_id = group_id_setting
+
+# Search nodes
+nodes_result = mcp__graphiti__search_nodes({
+    "query": "<your search query>",
+    "group_ids": [group_id],
+    "max_nodes": 10
+})
+
+# Search facts/relationships
+facts_result = mcp__graphiti__search_memory_facts({
+    "query": "<your search query>",
+    "group_ids": [group_id],
+    "max_facts": 20
+})
 ```
 
 **Tips:**
-- Prioritize high importance memories (9-10 = architectural patterns)
-- Look for patterns from other projects (cross-project learning)
-- Read linked code artifacts when memories reference them
+- Nodes are entities (classes, functions, concepts)
+- Facts are relationships between entities
+- Use both to build complete understanding
 
 ### 2. File System (Actual Code)
 **Read actual implementation files** when memories reference them:
@@ -56,23 +92,6 @@ If Memory + Context7 + File System don't provide enough context:
 - Search for recent solutions, patterns, or best practices
 - Focus on authoritative sources (official docs, GitHub, Stack Overflow)
 
-## Dynamic Discovery
-
-Discover available memory operations at runtime:
-
-```python
-from bridge import memory_list_operations
-
-operations = memory_list_operations()
-for op in operations:
-    print(f"{op['name']}: {op['description']}")
-    print(f"  Example: {op['example']}")
-```
-
-Useful when:
-- Backend capabilities differ (Graphiti vs Forgetful)
-- New operations added
-- Debugging integration issues
 
 ## Critical Guidelines
 
@@ -174,31 +193,39 @@ Return a focused markdown summary that provides the main agent with everything t
 **Task**: "Implement OAuth2 for FastAPI MCP server"
 
 **Your Process**:
-1. Query memory:
+1. Query Graphiti:
 ```python
-# Memory adapter automatically:
-# - Detects group_id from git repo
-# - Routes to configured backend (Graphiti/Forgetful)
-# - Handles backend-specific query format
+# Direct MCP tool call with auto-detected group_id
+nodes_result = mcp__graphiti__search_nodes({
+    "query": "OAuth FastAPI MCP JWT authentication",
+    "group_ids": [group_id],
+    "max_nodes": 10
+})
 
-results = memory_query("OAuth FastAPI MCP JWT authentication", limit=10)
+facts_result = mcp__graphiti__search_memory_facts({
+    "query": "OAuth authentication flow",
+    "group_ids": [group_id],
+    "max_facts": 20
+})
 ```
-2. Find relevant memories (e.g., OAuth implementation, architecture patterns)
-3. Read linked code files mentioned in memory metadata
-4. Query Context7: "fastapi oauth2 jwt"
-5. Return: OAuth patterns + code snippets + FastAPI Context7 guidance
+2. Read linked code files mentioned in node metadata
+3. Query Context7: "fastapi oauth2 jwt"
+4. Return: OAuth patterns + code snippets + FastAPI Context7 guidance
 
 **Task**: "Add PostgreSQL RLS for multi-tenant"
 
 **Your Process**:
-1. Query memory:
+1. Query Graphiti:
 ```python
-results = memory_query("PostgreSQL multi-tenant RLS row level security", limit=10)
+nodes_result = mcp__graphiti__search_nodes({
+    "query": "PostgreSQL multi-tenant RLS row level security",
+    "group_ids": [group_id],
+    "max_nodes": 10
+})
 ```
-2. Cross-project search (adapter searches across group_id automatically)
-3. Read any linked SQL migration files mentioned in memories
-4. Query Context7: "postgresql row level security"
-5. Return: RLS patterns + migration strategy + PostgreSQL-specific docs
+2. Read any linked SQL migration files
+3. Query Context7: "postgresql row level security"
+4. Return: RLS patterns + migration strategy + PostgreSQL docs
 
 ## Success Criteria
 
