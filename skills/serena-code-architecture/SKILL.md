@@ -1,12 +1,12 @@
 ---
 name: serena-code-architecture
-description: Architectural analysis workflow using Serena symbols and memory adapter. Use when analyzing project structure, documenting architecture, or creating architectural memories from code.
+description: Architectural analysis workflow using Serena symbols and Graphiti knowledge graph. Use when analyzing project structure, documenting architecture, or creating architectural memories from code.
 allowed-tools: mcp__plugin_serena_serena__get_symbols_overview, mcp__plugin_serena_serena__find_symbol, mcp__plugin_serena_serena__find_referencing_symbols, mcp__plugin_serena_serena__list_dir, mcp__plugin_serena_serena__search_for_pattern, Read, Glob
 ---
 
-# Architectural Analysis with Serena + Memory Adapter
+# Architectural Analysis with Serena + Graphiti
 
-This skill guides systematic architectural analysis using Serena's symbol-level understanding, with optional persistence to the memory adapter (Graphiti or Forgetful backend).
+This skill guides systematic architectural analysis using Serena's symbol-level understanding, with optional persistence to Graphiti knowledge graph.
 
 ## When to Use This Skill
 
@@ -14,7 +14,7 @@ This skill guides systematic architectural analysis using Serena's symbol-level 
 - Documenting existing architecture for a project
 - Persisting architectural insights to memory
 - Understanding dependencies and call hierarchies
-- Building a knowledge graph from code structure (Graphiti auto-extracts entities)
+- Building a knowledge graph from code structure
 
 ## Analysis Workflow
 
@@ -97,49 +97,77 @@ mcp__plugin_serena_serena__find_symbol({
 
 ### Phase 5: Create Architectural Memories (Optional)
 
-Store findings using the memory adapter:
+Store findings using Graphiti MCP:
 
 ```python
-import sys
+# Load config and detect group_id
+import yaml
 from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
+import subprocess
 
-from bridge import memory_save, memory_get_config
+config_path = Path.cwd() / '.context-hub.yaml'
+if config_path.exists():
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+else:
+    config = {'graphiti': {'group_id': 'auto'}}
 
-# Check which backend is active
-config = memory_get_config()
-# Returns: {'backend': 'graphiti', 'group_id': 'your-project'}
+group_id_setting = config.get('graphiti', {}).get('group_id', 'auto')
 
-# Save architectural insight
-memory_id = memory_save(
-  content="AuthService handles JWT validation, user sessions, and OAuth flows. Dependencies: UserRepository, TokenService, CacheService. Used by: all API endpoints via middleware.",
-  title="AuthService: Core authentication component",
-  importance=8,  # Forgetful only, ignored by Graphiti
-  tags=["architecture", "component", "auth"]
-)
+if group_id_setting == 'auto':
+    try:
+        result = subprocess.run(
+            ['git', 'remote', 'get-url', 'origin'],
+            capture_output=True,
+            text=True,
+            cwd=Path.cwd()
+        )
+        if result.returncode == 0:
+            remote = result.stdout.strip()
+            if '/' in remote:
+                group_id = remote.split('/')[-1].replace('.git', '')
+            else:
+                group_id = Path.cwd().name
+        else:
+            group_id = Path.cwd().name
+    except:
+        group_id = Path.cwd().name
+else:
+    group_id = group_id_setting
+
+# Save architectural finding to Graphiti
+result = mcp__graphiti__add_memory({
+    "name": "AuthService: Core authentication component",
+    "episode_body": "AuthService handles JWT validation, user sessions, and OAuth flows. Dependencies: UserRepository, TokenService, CacheService. Used by: all API endpoints via middleware.",
+    "group_id": group_id,
+    "source": "serena-analysis",
+    "source_description": "Code architecture analysis via Serena"
+})
 ```
 
-**Note**: Graphiti automatically extracts entities and relationships. Forgetful stores as tagged memory.
+**Note**: Graphiti automatically extracts entities and relationships from the episode body.
 
 ### Phase 6: Exploring the Knowledge Graph (Optional)
 
 Explore relationships between components:
 
 ```python
-from bridge import memory_explore
+# Search for related entities
+nodes_result = mcp__graphiti__search_nodes({
+    "query": "AuthService",
+    "group_ids": [group_id],
+    "max_nodes": 10
+})
 
-# Start from a component and traverse relationships
-graph = memory_explore("AuthService", depth=2)
-
-# Returns:
-# {
-#   'nodes': [{'id': ..., 'content': ..., 'metadata': ...}],
-#   'edges': [{'source': ..., 'target': ..., 'type': 'depends_on'}]
-# }
+# Get facts showing relationships
+facts_result = mcp__graphiti__search_memory_facts({
+    "query": "AuthService dependencies relationships",
+    "group_ids": [group_id],
+    "max_facts": 20
+})
 ```
 
-**Graphiti** automatically creates entities and relationships from saved memories.
-**Forgetful** requires explicit entity/relationship creation (see `curating-memories` skill).
+**Note**: Graphiti automatically creates entities and relationships from saved memories.
 
 ## Architectural Patterns
 
@@ -155,8 +183,6 @@ Graphiti will automatically extract:
 - Entities (components, services, classes)
 - Relationships (depends_on, uses, extends, implements)
 - Temporal relationships (created_before, modified_after)
-
-Forgetful requires explicit tagging and later curation (see `curating-memories` skill).
 
 ## Example: FastAPI Project Analysis
 
@@ -188,14 +214,13 @@ mcp__plugin_serena_serena__find_referencing_symbols({
 })
 
 # 5. Create architecture memory
-from bridge import memory_save
-
-memory_id = memory_save(
-  content="App uses router-based organization with dependency injection. Routers: /users, /auth, /products. Dependencies: get_current_user, get_db. All routes require auth except /auth/login.",
-  title="FastAPI app structure: Routers + Dependencies",
-  importance=8,
-  tags=["architecture", "pattern", "fastapi"]
-)
+result = mcp__graphiti__add_memory({
+    "name": "FastAPI app structure: Routers + Dependencies",
+    "episode_body": "App uses router-based organization with dependency injection. Routers: /users, /auth, /products. Dependencies: get_current_user, get_db. All routes require auth except /auth/login.",
+    "group_id": group_id,
+    "source": "serena-analysis",
+    "source_description": "FastAPI architecture analysis"
+})
 ```
 
 ## Analysis Checklist
@@ -215,7 +240,4 @@ memory_id = memory_save(
 2. **Focus on interfaces** - Public methods/APIs matter more than internals
 3. **Document decisions** - Create memories for WHY, not just WHAT
 4. **Include context** - Dependencies, dependents, patterns
-5. **Tag consistently** - Use tags like "architecture", "component", "pattern"
-6. **Leverage backend strengths**:
-   - Graphiti: Rich content for entity extraction
-   - Forgetful: Structured tagging for later curation
+5. **Rich episode content** - Include detailed descriptions for better entity extraction by Graphiti

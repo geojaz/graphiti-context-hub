@@ -183,7 +183,7 @@ Return a focused markdown summary that provides the main agent with everything t
 ## Search Strategy
 
 1. **Broad semantic search**: Query with task essence (e.g., "FastAPI JWT authentication refresh tokens")
-2. **Check ALL projects**: Use memory adapter (auto-searches across group_id)
+2. **Check ALL projects**: Query Graphiti knowledge graph with appropriate group_ids
 3. **Follow links**: Read code artifacts and documents linked to memories
 4. **Query Context7**: If frameworks mentioned, get specific patterns
 5. **Cross-reference**: If multiple memories mention same pattern, it's important
