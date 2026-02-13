@@ -29,10 +29,24 @@ graphiti:
 
 ### Required: Graphiti MCP Server
 
-Start Graphiti MCP server:
-```bash
-# Follow Graphiti MCP installation instructions
-graphiti-server start
+**Automatic Configuration**: This plugin automatically configures Claude Code to connect to Graphiti via HTTP at `http://localhost:8000/mcp`.
+
+**You need to install and run Graphiti separately:**
+
+1. Install the Graphiti MCP server (see [Graphiti documentation](https://github.com/getzep/graphiti))
+2. Start the server:
+   ```bash
+   graphiti-server start --port 8000
+   ```
+3. Verify the connection:
+   ```bash
+   /context-hub-setup
+   ```
+
+**Custom endpoint**: If running on a different host/port, update `.context-hub.yaml`:
+```yaml
+graphiti:
+  endpoint: "http://your-host:your-port"
 ```
 
 ### Required: Serena (for `/encode-repo-serena`)
