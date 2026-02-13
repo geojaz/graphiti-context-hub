@@ -1,76 +1,93 @@
 ---
-description: Search memories semantically using the memory adapter
+description: Search Graphiti knowledge graph semantically
 ---
 
 # Memory Search
 
-Search the knowledge base for relevant memories using the configured backend (Graphiti or Forgetful).
+Search the knowledge graph for relevant memories using Graphiti.
 
 ## Your Task
 
-Use the memory adapter's `query` operation to search for memories.
-
-**Query**: $ARGUMENTS
+Search Graphiti for: **$ARGUMENTS**
 
 ## Implementation
 
+**Step 1: Load config and detect group_id**
+
 ```python
-import sys
+import yaml
 from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
+import subprocess
 
-from bridge import memory_query, memory_get_config
+# Load config
+config_path = Path.cwd() / '.context-hub.yaml'
+if config_path.exists():
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+else:
+    config = {'graphiti': {'group_id': 'auto'}}
 
-# Show current config
-config = memory_get_config()
-print(f"Using backend: {config['backend']}, group: {config['group_id']}\n")
+group_id_setting = config.get('graphiti', {}).get('group_id', 'auto')
 
-# Search
+# Detect group_id if set to auto
+if group_id_setting == 'auto':
+    # Try to get from git repo name
+    try:
+        result = subprocess.run(
+            ['git', 'remote', 'get-url', 'origin'],
+            capture_output=True,
+            text=True,
+            cwd=Path.cwd()
+        )
+        if result.returncode == 0:
+            remote = result.stdout.strip()
+            # Extract repo name from URL
+            if '/' in remote:
+                group_id = remote.split('/')[-1].replace('.git', '')
+            else:
+                group_id = Path.cwd().name
+        else:
+            group_id = Path.cwd().name
+    except:
+        group_id = Path.cwd().name
+else:
+    group_id = group_id_setting
+
+print(f"Using group_id: {group_id}\n")
+```
+
+**Step 2: Search Graphiti**
+
+```python
 query = "$ARGUMENTS"
-results = memory_query(query, limit=10)
+
+# Call Graphiti MCP tool directly
+result = mcp__graphiti__search_nodes({
+    "query": query,
+    "group_ids": [group_id],
+    "max_nodes": 10
+})
 
 # Display results
-print(f"Found {len(results)} memories:\n")
-for i, memory in enumerate(results, 1):
-    title = memory['metadata'].get('title', memory['content'][:50])
-    print(f"{i}. {title}")
-    print(f"   {memory['content'][:100]}...")
-    print(f"   Created: {memory['created_at'][:10]}")
-    if memory.get('importance'):
-        print(f"   Importance: {memory['importance']}")
+nodes = result.get('nodes', [])
+print(f"Found {len(nodes)} memories:\n")
+
+for i, node in enumerate(nodes, 1):
+    name = node.get('name', 'Untitled')
+    summary = node.get('summary', '')
+    created = node.get('created_at', '')[:10]
+
+    print(f"{i}. {name}")
+    if summary:
+        print(f"   {summary[:150]}...")
+    print(f"   Created: {created}")
     print()
 ```
 
 ## Response Format
 
-Present results clearly:
-
-1. **Summary**: Brief overview of what was found
-2. **Memories**: For each result:
-   - Title/summary
-   - Content snippet (100 chars)
-   - Relevance indicators (importance, tags, dates)
-3. **Suggestions**: Help refine search if needed
-
-## Example
-
-User: `/memory-search authentication patterns`
-
-You respond:
-```
-Using backend: graphiti, group: agent-context
-
-Found 3 memories:
-
-1. FastAPI JWT Authentication
-   JWT middleware using httponly cookies for security...
-   Created: 2026-01-15
-
-2. OAuth2 Decision
-   Chose OAuth2 over API keys for user-facing auth...
-   Created: 2026-01-10
-
-3. Session Management
-   Redis-based session store with 24h expiration...
-   Created: 2026-01-08
-```
+Present results clearly with:
+1. Group ID being searched
+2. Number of results found
+3. For each memory: title, summary snippet, creation date
+4. Suggestions to refine search if needed
