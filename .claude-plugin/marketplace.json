@@ -1,36 +1,4 @@
 {
-  "name": "geojaz-forgetful-plugins",
-  "owner": {
-    "name": "eric hole",
-    "email": ""
-  },
-  "plugins": [
-    {
-      "name": "geojaz-context-hub-plugin",
-      "source": {
-        "source": "github",
-        "repo": "geojaz/context-hub-plugin"
-      },
-      "description": "Unified context retrieval with pluggable memory backends (Graphiti/Forgetful), Context7 docs, and Serena symbol analysis",
-      "version": "2.0.1",
-      "author": {
-        "name": "Eric Hole (fork of Scott Raisbeck)"
-      },
-      "repository": "https://github.com/geojaz/context-hub-plugin",
-      "license": "MIT",
-      "keywords": [
-        "context",
-        "memory",
-        "documentation",
-        "context7",
-        "serena",
-        "forgetful",
-        "graphiti",
-        "knowledge-graph",
-        "code-analysis",
-        "pluggable-backend"
-      ],
-      "category": "productivity"
-    }
-  ]
+  "marketplace_id": "geojaz-graphiti-context-hub",
+  "marketplace_url": "https://github.com/geojaz/graphiti-context-hub"
 }

@@ -1,11 +1,11 @@
 {
-  "name": "geojaz-context-hub-plugin",
-  "description": "Unified context retrieval with pluggable memory backends (Graphiti/Forgetful), Context7 docs, and Serena symbol analysis",
-  "version": "2.0.1",
+  "name": "graphiti-context-hub",
+  "description": "Context retrieval using Graphiti knowledge graph, Context7 docs, and Serena symbol analysis",
+  "version": "3.0.0",
   "author": {
-    "name": "Eric Hole (fork of Scott Raisbeck)",
+    "name": "Eric Hole",
     "url": "https://github.com/geojaz"
   },
   "license": "MIT",
-  "repository": "https://github.com/geojaz/context-hub-plugin"
+  "repository": "https://github.com/geojaz/graphiti-context-hub"
 }
