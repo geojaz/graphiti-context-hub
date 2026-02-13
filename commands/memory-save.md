@@ -4,30 +4,65 @@ description: Save current conversation context as a memory
 
 # Memory Save
 
-Save important context, decisions, or patterns to the knowledge base.
+Save important context, decisions, or patterns to the Graphiti knowledge base.
 
 ## Your Task
 
-Extract relevant context from the current conversation and save it using the memory adapter.
+Extract relevant context from the current conversation and save it using Graphiti.
 
 ## Implementation
 
+**Step 1: Load config and detect group_id**
+
 ```python
-import sys
+import yaml
 from pathlib import Path
-sys.path.insert(0, str(Path.cwd() / 'lib'))
+import subprocess
 
-from bridge import memory_save, memory_get_config
+# Load config
+config_path = Path.cwd() / '.context-hub.yaml'
+if config_path.exists():
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+else:
+    config = {'graphiti': {'group_id': 'auto'}}
 
-# Show config
-config = memory_get_config()
-print(f"Saving to backend: {config['backend']}, group: {config['group_id']}\n")
+group_id_setting = config.get('graphiti', {}).get('group_id', 'auto')
 
-# Extract context from conversation
+# Detect group_id if set to auto
+if group_id_setting == 'auto':
+    # Try to get from git repo name
+    try:
+        result = subprocess.run(
+            ['git', 'remote', 'get-url', 'origin'],
+            capture_output=True,
+            text=True,
+            cwd=Path.cwd()
+        )
+        if result.returncode == 0:
+            remote = result.stdout.strip()
+            # Extract repo name from URL
+            if '/' in remote:
+                group_id = remote.split('/')[-1].replace('.git', '')
+            else:
+                group_id = Path.cwd().name
+        else:
+            group_id = Path.cwd().name
+    except:
+        group_id = Path.cwd().name
+else:
+    group_id = group_id_setting
+
+print(f"Using group_id: {group_id}\n")
+```
+
+**Step 2: Extract context and save to Graphiti**
+
+```python
 # Analyze the recent messages to determine:
 # - What decision was made or pattern discovered
 # - Why it matters (importance)
-# - Relevant keywords/tags
+# - Relevant context
 
 # Example structure:
 title = "<concise title of what's being saved>"
@@ -41,22 +76,22 @@ Include:
 - How: Implementation details if applicable
 """
 
-importance = <1-10 score>  # Only for Forgetful backend
-keywords = ["keyword1", "keyword2"]
-tags = ["tag1", "tag2"]
+# Combine title and content for Graphiti
+episode_body = f"{title}\n\n{content}"
 
-# Save the memory
-memory_id = memory_save(
-    content=content,
-    title=title,
-    importance=importance,  # Ignored by Graphiti
-    keywords=keywords,      # Ignored by Graphiti
-    tags=tags              # Ignored by Graphiti
-)
+# Call Graphiti MCP tool directly
+result = mcp__graphiti__add_memory({
+    "name": title,
+    "episode_body": episode_body,
+    "group_id": group_id,
+    "source": "text",
+    "source_description": "conversation context"
+})
 
-print(f"✅ Saved memory with ID: {memory_id}")
+print(f"✅ Saved memory to Graphiti")
 print(f"   Title: {title}")
-print(f"   Backend: {config['backend']}")
+print(f"   Group: {group_id}")
+print(f"\nGraphiti will automatically extract entities and relationships from this memory.")
 ```
 
 ## Extraction Guidelines
@@ -73,12 +108,6 @@ print(f"   Backend: {config['backend']}")
 - ❌ Temporary implementation details
 - ❌ Information already well-documented elsewhere
 
-**Importance Scoring (for Forgetful):**
-- 9-10: Critical decisions, user preferences, major patterns
-- 7-8: Important patterns, significant implementations
-- 5-6: Useful context, minor decisions
-- 1-4: Nice-to-know, low priority
-
 ## Response Format
 
 Clearly communicate what was saved:
@@ -87,15 +116,14 @@ Clearly communicate what was saved:
 ✅ Saved: <title>
 
 Content: <brief summary>
-Backend: <graphiti|forgetful>
 Group: <group-id>
-ID: <memory-id>
 
-This memory will be available for future context retrieval.
+Graphiti will automatically extract entities and relationships from this memory.
 ```
 
 ## Notes
 
-- **No project discovery needed**: Adapter auto-detects group_id from git repo
-- **Backend differences**: Graphiti auto-extracts entities, Forgetful uses explicit metadata
+- **No adapter layer**: Calls Graphiti MCP directly
+- **Auto-extracts entities**: Graphiti automatically identifies concepts and relationships
 - **Atomic memories**: Keep focused on one concept per save
+- **Group isolation**: Memories are scoped by group_id (auto-detected from git repo)
