@@ -1,7 +1,7 @@
 {
   "name": "graphiti-context-hub",
   "description": "Context retrieval using Graphiti knowledge graph, Context7 docs, and Serena symbol analysis",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "author": {
     "name": "Eric Hole",
     "url": "https://github.com/geojaz"
