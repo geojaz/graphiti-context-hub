@@ -1,6 +1,0 @@
-# DEPRECATED: This format is still supported but .context-hub.conf is preferred
-# Bash config (.context-hub.conf) will override this if present
-
-graphiti:
-  group_id: "main"  # Changed from "auto" to "main"
-  endpoint: "http://localhost:8000"

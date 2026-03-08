@@ -1,7 +1,7 @@
 ---
 name: context-retrieval
-description: Context retrieval specialist for gathering relevant memories, code patterns, and framework documentation. Uses Graphiti knowledge graph for cross-project knowledge search.
-tools: mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch, WebFetch, Read, Glob, Grep
+description: Context retrieval specialist for gathering relevant memories, code patterns, and framework documentation before planning or implementation. Use PROACTIVELY before and during planning and implementation. Searches graphiti memory storage, reads linked artifacts/documents, and leverages Context7 to retrieve up to date and version specific docs and examples.
+tools: mcp__graphiti__search_nodes, mcp__graphiti__search_facts, mcp__graphiti__get_episodes, mcp__graphiti__get_entity_edge, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch, WebFetch, Read, Glob, Grep
 model: sonnet
 ---
 
