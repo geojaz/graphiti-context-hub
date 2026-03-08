@@ -4,34 +4,45 @@ description: Configure Graphiti MCP backend and plugin prerequisites
 
 # Context Hub Setup
 
-Configure Graphiti Context Hub with your endpoint and preferences.
+You MUST follow these steps in order. Do NOT summarize — execute each step interactively.
 
 ## Step 1: Collect Configuration
 
-Ask the user for the following (provide defaults):
+You MUST ask the user these questions before proceeding. Wait for their answers.
 
-1. **Graphiti endpoint** — Where is your Graphiti MCP server?
-   - Default: `http://localhost:8000`
-   - Examples: `http://localhost:8000`, `https://graphiti.example.com`
+**Question 1:** "What is your Graphiti MCP endpoint? (default: `http://localhost:8000`)"
 
-2. **Group ID** — Identifier for your knowledge graph
-   - Default: `main`
-   - All memories are stored under this group_id
-   - Repo context is preserved via automatic `Repo: {name}` tagging in episodes
+**Question 2:** "What group_id should I use for your knowledge graph? (default: `main`)"
 
-## Step 2: Detect Plugins
+Store their answers (or defaults if they accept) for use in later steps.
 
-Check which companion plugins are available by attempting to use their tools:
+## Step 2: Detect Companion Plugins
 
-**Serena check:** Try calling `mcp__plugin_serena_serena__get_current_config`. If it succeeds, Serena is available.
+Run these checks NOW and report what you find:
 
-**Context7 check:** Try calling `mcp__plugin_context7_context7__resolve-library-id` with a test query. If it succeeds, Context7 is available.
+1. **Serena:** Call `mcp__plugin_serena_serena__get_current_config`. Report whether it succeeded.
+2. **Context7:** Call `mcp__plugin_context7_context7__resolve-library-id` with query "test". Report whether it succeeded.
 
-Report findings to user.
+Tell the user which companions were detected.
 
-## Step 3: Write Configuration
+## Step 3: Test Graphiti Connection
 
-Create the global config file:
+Call `mcp__graphiti__get_status()` to verify the Graphiti MCP server is reachable.
+
+If it fails, show this and STOP:
+```
+Connection to Graphiti failed.
+
+Troubleshooting:
+1. Ensure Graphiti MCP server is running at {endpoint}
+2. Test manually: curl {endpoint}/health
+3. Check the Graphiti documentation: https://github.com/getzep/graphiti
+4. Re-run /context-hub-setup with a different endpoint
+```
+
+## Step 4: Write Configuration
+
+Run this bash command (substitute the user's values):
 
 ```bash
 mkdir -p "$HOME/.config/claude"
@@ -47,17 +58,12 @@ EOF
 echo "Configuration saved to ~/.config/claude/graphiti-context-hub.conf"
 ```
 
-## Step 4: Test Connection
+## Step 5: Report Results
 
-Test Graphiti connectivity:
+Show this summary with the actual values filled in:
 
 ```
-result = mcp__graphiti__get_status()
-```
-
-If successful, report:
-```
-Setup Complete
+✓ Setup Complete
 
   Endpoint:  {endpoint}
   Group ID:  {group_id}
@@ -73,30 +79,3 @@ Available commands:
   /memory-explore <query> - Deep graph traversal
   /encode-repo-serena     - Bootstrap repo (requires Serena)
 ```
-
-If connection fails, provide troubleshooting:
-```
-Connection to Graphiti failed.
-
-Troubleshooting:
-1. Ensure Graphiti MCP server is running at {endpoint}
-2. Test manually: curl {endpoint}/health
-3. Check the Graphiti documentation: https://github.com/getzep/graphiti
-4. Re-run /context-hub-setup with a different endpoint
-```
-
-## Troubleshooting
-
-### Graphiti Connection Issues
-- Verify server is running: `curl http://localhost:8000/health`
-- Check that the Graphiti MCP server is properly started
-- Review Claude Code logs for MCP errors
-
-### Plugin Issues
-- Serena not found: `claude plugins install serena`
-- Context7 not found: `claude plugins install context7 --marketplace pleaseai/claude-code-plugins`
-
-### Configuration Issues
-- Config file location: `~/.config/claude/graphiti-context-hub.conf`
-- Re-run `/context-hub-setup` to recreate
-- Check file permissions
