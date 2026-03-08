@@ -40,6 +40,15 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/context-reminder.sh plan"
           }
         ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/context-reminder.sh agent"
+          }
+        ]
       }
     ],
     "PreCompact": [

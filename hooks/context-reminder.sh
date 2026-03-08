@@ -30,6 +30,9 @@ case "$HOOK_TYPE" in
     compact)
         echo "{\"additionalContext\": \"CONTEXT COMPACTION IMMINENT: Save any unsaved decisions, patterns, bug findings, or important context to Graphiti (add_memory with group_id \\\"${GROUP_ID}\\\", prefix episode_body with \\\"Repo: ${REPO_NAME}\\\"). Summarize the current task state so it survives compaction.\"}"
         ;;
+    agent)
+        echo "{\"additionalContext\": \"Before launching an exploration subagent: Have you checked Graphiti first? Search search_memory_facts + search_nodes with group_ids: [\\\"${GROUP_ID}\\\"] for this topic — the answer may already be in the knowledge graph, saving an expensive exploration. Also save any unsaved findings before handoff.\"}"
+        ;;
     subagent-start)
         echo "{\"additionalContext\": \"SUBAGENT LAUNCHING: Save any important findings or decisions to Graphiti (add_memory with group_id \\\"${GROUP_ID}\\\", prefix episode_body with \\\"Repo: ${REPO_NAME}\\\") before handoff. The subagent will not have access to unsaved context.\"}"
         ;;
