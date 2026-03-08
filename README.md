@@ -1,6 +1,6 @@
 # Graphiti Context Hub
 
-Unified context retrieval for Claude Code - orchestrates **Graphiti knowledge graph**, **Context7 documentation**, and **Serena symbol analysis** into a single context-gathering workflow.
+Unified context retrieval for Claude Code — orchestrates **Graphiti knowledge graph**, **Context7 documentation**, and **Serena symbol analysis** into a single context-gathering workflow.
 
 ## Installation
 
@@ -13,68 +13,54 @@ Or install from local path:
 claude plugins install /path/to/graphiti-context-hub
 ```
 
-## Configuration
-
-**Global Config** (recommended): `~/.config/claude/graphiti-context-hub.conf`
-
-```bash
-GRAPHITI_GROUP_ID=main
-GRAPHITI_ENDPOINT=http://localhost:8000
-```
-
-**Local Override** (optional): `.context-hub.conf` in repo
-
-Run `/context-hub-setup` to create global config automatically.
-
-**Group ID**: Uses "main" for unified cross-repo knowledge graph. All memories include repo context for flexible filtering.
-
-## Prerequisites
-
-### Required: Graphiti MCP Server
-
-**Automatic Configuration**: This plugin automatically configures Claude Code to connect to Graphiti via HTTP at `http://localhost:8000/mcp`.
-
-**You need to install and run Graphiti separately:**
-
-1. Install the Graphiti MCP server (see [Graphiti documentation](https://github.com/getzep/graphiti))
-2. Start the server:
-   ```bash
-   graphiti-server start --port 8000
-   ```
-3. Verify the connection:
-   ```bash
-   /context-hub-setup
-   ```
-
-**Custom endpoint**: If running on a different host/port, update `.context-hub.yaml`:
-```yaml
-graphiti:
-  endpoint: "http://your-host:your-port"
-```
-
-### Required: Serena (for `/encode-repo-serena`)
-```bash
-claude plugins install serena
-```
-
-### Recommended: Context7 (for framework docs)
-```bash
-claude plugins install context7 --marketplace pleaseai/claude-code-plugins
-```
-
 ## Setup
 
-Run the setup command to configure and verify:
+Run the setup command to configure:
 
-```bash
+```
 /context-hub-setup
 ```
 
 This will:
-1. Check if Serena and Context7 plugins are installed
-2. Create `.context-hub.yaml` configuration file
-3. Test Graphiti MCP connectivity
-4. Verify group_id auto-detection
+1. Ask for your Graphiti endpoint (default: `http://localhost:8000`)
+2. Ask for your group_id (default: `main`)
+3. Detect companion plugins (Serena, Context7)
+4. Write configuration to `~/.config/claude/graphiti-context-hub.conf`
+5. Test Graphiti connectivity
+
+### Prerequisites
+
+**Required: Graphiti MCP Server**
+
+Install and run the Graphiti MCP server (see [Graphiti documentation](https://github.com/getzep/graphiti)):
+
+```bash
+graphiti-server start --port 8000
+```
+
+**Recommended: Serena** (for `/encode-repo-serena`)
+```bash
+claude plugins install serena
+```
+
+**Recommended: Context7** (for framework docs)
+```bash
+claude plugins install context7 --marketplace pleaseai/claude-code-plugins
+```
+
+## Configuration
+
+Single config file: `~/.config/claude/graphiti-context-hub.conf`
+
+```bash
+GRAPHITI_GROUP_ID=main
+GRAPHITI_ENDPOINT=http://localhost:8000
+SERENA_ENABLED=true
+```
+
+Created automatically by `/context-hub-setup`.
+
+**Group ID**: Uses a single unified knowledge graph. All memories include repo context via automatic `Repo: {name}` tagging for flexible cross-repo querying.
 
 ## Commands
 
@@ -102,19 +88,31 @@ This will:
 
 ## Skills
 
-Graphiti Context Hub includes auto-discovered skills:
-
-### Memory Skills
 | Skill | Description |
 |-------|-------------|
 | `using-graphiti-memory` | When/how to query and save to Graphiti |
 | `exploring-knowledge-graph` | Deep graph traversal and relationship discovery |
-
-### Serena Skills
-| Skill | Description |
-|-------|-------------|
 | `using-serena-symbols` | Symbol-level code analysis guidance |
 | `serena-code-architecture` | Architectural analysis with Graphiti integration |
+
+## Hooks
+
+This plugin automatically registers advisory hooks that encourage context-aware development:
+
+| Hook | Trigger | Purpose |
+|------|---------|---------|
+| SessionStart | Every session | Check config, provide Graphiti context |
+| PreToolUse (Edit/Write) | Before code changes | Remind to query Graphiti for prior decisions |
+| PreToolUse (EnterPlanMode) | Before planning | Remind to gather context first |
+| PreCompact | Before compaction | Remind to save unsaved context to Graphiti |
+| SubagentStart | Before subagent | Remind to persist context before handoff |
+| SubagentStop | After subagent | Remind to capture subagent findings |
+
+All hooks are zero-token-cost (`command` type) — they add context reminders without consuming LLM tokens.
+
+Hooks are conditional on configuration:
+- Serena reminders only appear when `SERENA_ENABLED=true` in config
+- Group ID and repo name are automatically injected from config
 
 ## How It Works
 
@@ -122,97 +120,60 @@ Graphiti Context Hub includes auto-discovered skills:
 
 Orchestrates multiple sources:
 
-1. **Graphiti Knowledge Graph** - Semantic search across entities and relationships
-2. **File System** - Read actual code files
-3. **Context7** - Framework-specific documentation (if installed)
-4. **Serena** - Symbol-level code analysis (if installed)
-5. **WebSearch** - Fallback for recent information
-
-Returns synthesized summary with:
-- Relevant entities and relationships
-- Code patterns and snippets
-- Framework guidance
-- Architectural decisions
-
-### /encode-repo-serena
-
-Uses Serena's LSP-powered analysis:
-- **Symbol extraction** - Classes, functions, methods with locations
-- **Relationship discovery** - Dependencies and references
-- **Cross-file analysis** - Component connections
-
-Stores findings as episodes in Graphiti for future retrieval.
+1. **Graphiti Knowledge Graph** — Semantic search across entities and relationships
+2. **File System** — Read actual code files
+3. **Context7** — Framework-specific documentation (if installed)
+4. **Serena** — Symbol-level code analysis (if installed)
+5. **WebSearch** — Fallback for recent information
 
 ### Repository Tagging
 
 All memories automatically include repository context:
 
 ```
-Repo: graphiti-context-hub
+Repo: my-project
 
 Decision: Implemented user-level group_id
-
 Rationale: Enables cross-repo pattern discovery
 ```
 
-**Benefits**:
-- Search by repo: "authentication in graphiti-context-hub"
-- Search globally: "authentication patterns" finds across all repos
-- See which projects use similar patterns
-- Graphiti extracts repo names as entities automatically
-
-## Example Usage
-
-```bash
-# Before implementing a feature
-/context_gather implement OAuth2 authentication for the API
-
-# Bootstrap a new project
-/encode-repo-serena
-
-# Quick memory search
-/memory-search authentication patterns
-
-# Save an important decision
-/memory-save
-
-# Explore the knowledge graph
-/memory-explore authentication architecture
-```
+This enables both repo-specific and cross-repo queries.
 
 ## Architecture
 
 ```
-graphiti-context-hub
+graphiti-context-hub/
+├── hooks/
+│   ├── hooks.json                 ─── Hook registration
+│   ├── session-start.sh           ─── Config check on session start
+│   └── context-reminder.sh        ─── Advisory context reminders
 ├── skills/
-│   ├── using-graphiti-memory/      ─── Memory usage guide
-│   ├── exploring-knowledge-graph/   ─── Graph traversal
-│   ├── using-serena-symbols/        ─── Symbol analysis
-│   └── serena-code-architecture/    ─── Architecture workflows
+│   ├── using-graphiti-memory/     ─── Memory usage guide
+│   ├── exploring-knowledge-graph/ ─── Graph traversal
+│   ├── using-serena-symbols/      ─── Symbol analysis
+│   └── serena-code-architecture/  ─── Architecture workflows
 ├── commands/
-│   ├── context_gather.md            ─── Multi-source retrieval
-│   ├── encode-repo-serena.md        ─── Repository encoding
-│   └── memory-*.md                  ─── Memory management
-└── agents/
-    └── context-retrieval.md         ─── Context gathering agent
+│   ├── context_gather.md          ─── Multi-source retrieval
+│   ├── context-hub-setup.md       ─── Interactive setup
+│   ├── encode-repo-serena.md      ─── Repository encoding
+│   └── memory-*.md                ─── Memory management
+├── agents/
+│   └── context-retrieval.md       ─── Context gathering agent
+└── .claude-plugin/
+    ├── plugin.json                ─── Plugin metadata
+    └── servers.json               ─── Graphiti MCP default config
 ```
 
-## Graphiti Features
+## Graphiti MCP Tools
 
-**Automatic Entity Extraction:**
-- Saves episodes and automatically extracts entities
-- Creates relationships between entities
-- No manual linking required
+**Primary tools used by this plugin:**
+- `mcp__graphiti__add_memory` — Save episodes to knowledge graph
+- `mcp__graphiti__search_nodes` — Search for entities
+- `mcp__graphiti__search_memory_facts` — Search for relationships between entities
+- `mcp__graphiti__get_episodes` — List episodes chronologically
+- `mcp__graphiti__get_entity_edge` — Get specific relationship details
 
-**Knowledge Graph:**
-- Entities: Classes, functions, concepts, decisions
-- Relationships: Dependencies, implementations, influences
-- Temporal: Track evolution over time
-
-**Search:**
-- Semantic search across nodes (entities)
-- Relationship search via facts
-- Episode chronology for context
+Graphiti automatically extracts entities and relationships from episode content — no manual linking required.
 
 ## License
 
