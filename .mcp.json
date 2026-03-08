@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "graphiti": {
-      "type": "http",
-      "url": "http://localhost:8000/mcp"
+      "type": "stdio",
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/graphiti-mcp.sh"
     }
   }
 }
