@@ -139,17 +139,17 @@ mcp__plugin_serena_serena__list_dir({
 
 ### Step 3: Check Existing Memory Coverage
 
+```bash
+# Load config
+source "$HOME/.config/claude/graphiti-context-hub.conf" 2>/dev/null
+GROUP_ID="${GRAPHITI_GROUP_ID:-main}"
+REPO_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$PWD")
+echo "Group ID: $GROUP_ID"
+echo "Repo: $REPO_NAME"
+```
+
 ```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
-from lib.config import get_git_repo_name
-
-# Get group_id
-GROUP_ID = get_git_repo_name() or Path.cwd().name
-print(f"Group ID: {GROUP_ID}\n")
-
-# Query existing episodes
+# Query existing episodes (GROUP_ID from bash output above)
 results = mcp__graphiti__search_memory_facts({
     "query": "architecture patterns",
     "group_ids": [GROUP_ID],
@@ -183,9 +183,8 @@ Report findings before proceeding.
 ### Load config and detect repo
 
 ```bash
-[ -f "$HOME/.config/claude/graphiti-context-hub.conf" ] && source "$HOME/.config/claude/graphiti-context-hub.conf"
-[ -f ".context-hub.conf" ] && source ".context-hub.conf"
-
+# Load config
+source "$HOME/.config/claude/graphiti-context-hub.conf" 2>/dev/null
 GROUP_ID="${GRAPHITI_GROUP_ID:-main}"
 REPO_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$PWD")
 
@@ -1135,13 +1134,15 @@ After completion, verify coverage:
 
 ### Test Episodes
 
-```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent / 'lib'))
-from lib.config import get_git_repo_name
+```bash
+# Load config
+source "$HOME/.config/claude/graphiti-context-hub.conf" 2>/dev/null
+GROUP_ID="${GRAPHITI_GROUP_ID:-main}"
+echo "Validating group: $GROUP_ID"
+```
 
-GROUP_ID = get_git_repo_name() or Path.cwd().name
+```python
+# GROUP_ID comes from bash config loaded above
 
 # Test basic queries
 results = mcp__graphiti__search_memory_facts({
