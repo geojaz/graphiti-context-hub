@@ -100,26 +100,26 @@ Example:
 ```
 Using group_id: context-hub-plugin
 
-Starting from: Graphiti Backend
-Summary: Graph-based memory storage system that automatically extracts entities and relationships...
+Starting from: Authentication Service
+Summary: Handles JWT validation, user sessions, and OAuth flows for the API...
 
 Discovered 8 related facts:
 
-1. Graphiti Backend replaced Forgetful for better entity extraction
-   Forgetful Backend → Graphiti Backend
+1. AuthService depends on Redis for session storage
+   AuthService → Redis
 
-2. Memory commands use Graphiti MCP tools directly
-   Memory Commands → Graphiti MCP
+2. All API endpoints require authentication via middleware
+   API Endpoints → AuthService
 
-3. Graphiti supports group_id for project isolation
-   Graphiti Backend → Group ID System
+3. JWT tokens use httponly cookies for XSS protection
+   AuthService → JWT Configuration
 
 Connected concepts (5):
-  - Forgetful Backend
-  - Group ID System
-  - Memory Commands
-  - MCP Tools
-  - Project Isolation
+  - Redis
+  - JWT Configuration
+  - API Endpoints
+  - User Sessions
+  - OAuth Provider
 ```
 
 ## Notes

@@ -64,12 +64,12 @@ Using group_id: context-hub-plugin
 
 Found 5 recent episodes:
 
-1. Implemented Graphiti Backend
-   Replaced Forgetful backend with Graphiti for graph-based memory storage...
+1. Authentication Architecture
+   JWT tokens stored in httponly cookies with Redis-backed session storage...
    Created: 2024-03-15 14:30:22
 
-2. Updated Memory Commands
-   Refactored memory-search, memory-save, memory-list to use Graphiti MCP...
+2. API Design Patterns
+   REST endpoints follow resource-based routing with dependency injection...
    Created: 2024-03-15 13:15:10
 ```
 
