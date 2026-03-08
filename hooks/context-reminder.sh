@@ -18,11 +18,14 @@ if [ "$SERENA" = "true" ]; then
 fi
 
 case "$HOOK_TYPE" in
+    prompt-submit)
+        echo "{\"additionalContext\": \"Context hub active (group_id: ${GROUP_ID}, repo: ${REPO_NAME}). Use /context_gather for multi-source retrieval before starting new work areas. Use /memory-save to capture decisions, patterns, and findings worth preserving. Search Graphiti (search_memory_facts + search_nodes with group_ids: [\\\"${GROUP_ID}\\\"]) when working in unfamiliar code.\"}"
+        ;;
     edit-write)
-        echo "{\"additionalContext\": \"Before modifying code: Have you queried Graphiti (search_memory_facts + search_nodes with group_ids: [\\\"${GROUP_ID}\\\"]) for prior decisions and patterns in this area?${SERENA_CLAUSE} If not, gather context first.\"}"
+        echo "{\"additionalContext\": \"Before modifying code: Have you queried Graphiti (search_memory_facts + search_nodes with group_ids: [\\\"${GROUP_ID}\\\"]) for prior decisions and patterns in this area?${SERENA_CLAUSE} If not, use /context_gather first.\"}"
         ;;
     plan)
-        echo "{\"additionalContext\": \"Before planning: Gather context first. (1) Query Graphiti (search_memory_facts + search_nodes with group_ids: [\\\"${GROUP_ID}\\\"]) for prior decisions and patterns. (2) Check docs/plans/ for prior design docs. (3) Check git history for recent changes.${SERENA_CLAUSE}\"}"
+        echo "{\"additionalContext\": \"Before planning: Gather context first. (1) Use /context_gather or query Graphiti (search_memory_facts + search_nodes with group_ids: [\\\"${GROUP_ID}\\\"]) for prior decisions and patterns. (2) Check docs/plans/ for prior design docs. (3) Check git history for recent changes.${SERENA_CLAUSE}\"}"
         ;;
     compact)
         echo "{\"additionalContext\": \"CONTEXT COMPACTION IMMINENT: Save any unsaved decisions, patterns, bug findings, or important context to Graphiti (add_memory with group_id \\\"${GROUP_ID}\\\", prefix episode_body with \\\"Repo: ${REPO_NAME}\\\"). Summarize the current task state so it survives compaction.\"}"
