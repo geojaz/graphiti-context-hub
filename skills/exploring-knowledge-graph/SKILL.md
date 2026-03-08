@@ -19,8 +19,7 @@ allowed-tools: Read, Glob, Grep
 **Step 1: Find starting point**
 
 ```bash
-[ -f "$HOME/.config/claude/graphiti-context-hub.conf" ] && source "$HOME/.config/claude/graphiti-context-hub.conf"
-[ -f ".context-hub.conf" ] && source ".context-hub.conf"
+source "$HOME/.config/claude/graphiti-context-hub.conf" 2>/dev/null
 
 GROUP_ID="${GRAPHITI_GROUP_ID:-main}"
 REPO_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$PWD")

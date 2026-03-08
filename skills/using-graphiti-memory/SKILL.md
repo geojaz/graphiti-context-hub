@@ -25,8 +25,7 @@ allowed-tools: Read, Glob, Grep
 **Step 1: Get config and repo context** (run once):
 
 ```bash
-[ -f "$HOME/.config/claude/graphiti-context-hub.conf" ] && source "$HOME/.config/claude/graphiti-context-hub.conf"
-[ -f ".context-hub.conf" ] && source ".context-hub.conf"
+source "$HOME/.config/claude/graphiti-context-hub.conf" 2>/dev/null
 
 GROUP_ID="${GRAPHITI_GROUP_ID:-main}"
 REPO_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$PWD")
@@ -55,8 +54,7 @@ facts_result = mcp__graphiti__search_memory_facts({
 **Step 1: Get config** (if not already loaded):
 
 ```bash
-[ -f "$HOME/.config/claude/graphiti-context-hub.conf" ] && source "$HOME/.config/claude/graphiti-context-hub.conf"
-[ -f ".context-hub.conf" ] && source ".context-hub.conf"
+source "$HOME/.config/claude/graphiti-context-hub.conf" 2>/dev/null
 
 GROUP_ID="${GRAPHITI_GROUP_ID:-main}"
 REPO_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$PWD")
@@ -111,20 +109,15 @@ episode_id = result.get('episode_id', result.get('uuid'))
 
 ## Configuration
 
-**Global config** (optional): `~/.config/claude/graphiti-context-hub.conf`
+Config file: `~/.config/claude/graphiti-context-hub.conf`
 
 ```bash
 GRAPHITI_GROUP_ID=main
 GRAPHITI_ENDPOINT=http://localhost:8000
+SERENA_ENABLED=true
 ```
 
-**Repo-level override** (optional): `.context-hub.conf`
-
-```bash
-GRAPHITI_GROUP_ID=main
-```
-
-**Defaults**: `GROUP_ID` defaults to "main". Repo name is auto-detected from git remote.
+Created by `/context-hub-setup`. Defaults: group_id=main, endpoint=localhost:8000.
 
 ## Common Patterns
 
