@@ -1,7 +1,7 @@
 ---
 name: context-retrieval
 description: Context retrieval specialist for gathering relevant memories, code patterns, and framework documentation before planning or implementation. Use PROACTIVELY before and during planning and implementation. Searches graphiti memory storage, reads linked artifacts/documents, and leverages Context7 to retrieve up to date and version specific docs and examples.
-tools: mcp__graphiti__search_nodes, mcp__graphiti__search_facts, mcp__graphiti__get_episodes, mcp__graphiti__get_entity_edge, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch, WebFetch, Read, Glob, Grep
+tools: mcp__graphiti__search_nodes, mcp__graphiti__search_memory_facts, mcp__graphiti__get_episodes, mcp__graphiti__get_entity_edge, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch, WebFetch, Read, Glob, Grep
 model: sonnet
 ---
 
@@ -17,27 +17,20 @@ The main agent is about to plan or implement something. Your job is to gather RE
 
 **Query the knowledge graph** using Graphiti MCP tools:
 
-```bash
-# Load group_id from config using Bash
-source ~/.config/claude/graphiti-context-hub.conf 2>/dev/null || source .context-hub.conf 2>/dev/null || GRAPHITI_GROUP_ID=main
-echo "Using group_id: $GRAPHITI_GROUP_ID"
-```
+**Configuration**: The SessionStart hook provides group_id and repo context. Use group_ids: ["main"] (or the value from hook context) for all Graphiti queries. Prefix episode_body with "Repo: {repo_name}" when saving.
 
 ```python
-# Use the loaded group_id in your queries
-group_id = os.environ.get('GRAPHITI_GROUP_ID', 'main')
-
 # Search nodes
 nodes_result = mcp__graphiti__search_nodes({
     "query": "<your search query>",
-    "group_ids": [group_id],
+    "group_ids": ["main"],
     "max_nodes": 10
 })
 
 # Search facts/relationships
 facts_result = mcp__graphiti__search_memory_facts({
     "query": "<your search query>",
-    "group_ids": [group_id],
+    "group_ids": ["main"],
     "max_facts": 20
 })
 ```
@@ -71,18 +64,17 @@ If Memory + Context7 + File System don't provide enough context:
 ## Critical Guidelines
 
 **Explore the Knowledge Graph:**
-- Follow memory links when they lead to relevant context
-- Read linked memories if they connect important concepts
-- Trace patterns across multiple related memories
-- When you find a key memory, explore its `linked_memory_ids` to build complete picture
+- When you find a relevant node, use search_memory_facts with center_node_uuid to find connected facts
+- Get episodes chronologically with get_episodes to understand evolution
+- Use get_entity_edge for specific relationship details
+- Trace patterns across multiple related nodes and facts
 - Don't artificially limit exploration if the connections are valuable
 
-**Read Artifacts and Documents:**
-- When memories have `code_artifact_ids` or `document_ids`, READ them
+**Read Code Files:**
+- When memories reference file paths, use Read to examine actual code
 - Extract RELEVANT portions - use judgment on how much context is needed
-- If the artifact is directly applicable, include more (up to 50 lines)
+- If the code is directly applicable, include more (up to 50 lines)
 - If it's just reference, extract the key pattern (10-20 lines)
-- Example: If memory links to "auth implementation", read artifact and extract JWT middleware pattern
 
 **Cross-Project Intelligence:**
 - Always search ALL projects first
@@ -170,16 +162,15 @@ Return a focused markdown summary that provides the main agent with everything t
 **Your Process**:
 1. Query Graphiti (using user-level group_id "main"):
 ```python
-group_id = os.environ.get('GRAPHITI_GROUP_ID', 'main')
 nodes_result = mcp__graphiti__search_nodes({
     "query": "OAuth FastAPI MCP JWT authentication",
-    "group_ids": [group_id],
+    "group_ids": ["main"],
     "max_nodes": 10
 })
 
 facts_result = mcp__graphiti__search_memory_facts({
     "query": "OAuth authentication flow",
-    "group_ids": [group_id],
+    "group_ids": ["main"],
     "max_facts": 20
 })
 ```
@@ -192,7 +183,7 @@ Pattern: Used FastAPI OAuth2PasswordBearer with JWT tokens
 [... more details ...]
 ```
 
-2. Read linked code files mentioned in node metadata
+2. Read code files referenced in node summaries
 3. Query Context7: "fastapi oauth2 jwt"
 4. Return: OAuth patterns + code snippets + FastAPI Context7 guidance + repo context
 
@@ -201,10 +192,9 @@ Pattern: Used FastAPI OAuth2PasswordBearer with JWT tokens
 **Your Process**:
 1. Query Graphiti (searches across all repos):
 ```python
-group_id = os.environ.get('GRAPHITI_GROUP_ID', 'main')
 nodes_result = mcp__graphiti__search_nodes({
     "query": "PostgreSQL multi-tenant RLS row level security",
-    "group_ids": [group_id],
+    "group_ids": ["main"],
     "max_nodes": 10
 })
 ```
