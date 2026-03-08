@@ -8,13 +8,12 @@ You MUST follow these steps in order. Do NOT summarize — execute each step int
 
 ## Step 1: Collect Configuration
 
-You MUST ask the user these questions before proceeding. Wait for their answers.
+You MUST ask the user this question before proceeding. Wait for their answer.
 
-**Question 1:** "What is your Graphiti MCP endpoint? (default: `http://localhost:8000`)"
+**Question:** "What group_id should I use for your knowledge graph? (default: `main`)"
 
-**Question 2:** "What group_id should I use for your knowledge graph? (default: `main`)"
-
-Store their answers (or defaults if they accept) for use in later steps.
+Note: The Graphiti MCP endpoint is configured in the plugin's `.mcp.json` file, not here.
+Store the group_id for use in later steps.
 
 ## Step 2: Detect Companion Plugins
 
@@ -34,13 +33,15 @@ If it fails, show this and STOP:
 Connection to Graphiti failed.
 
 Troubleshooting:
-1. Ensure Graphiti MCP server is running at {endpoint}
-2. Test manually: curl {endpoint}/health
+1. Ensure Graphiti MCP server is running (check the URL in plugin .mcp.json)
+2. Test manually: curl http://localhost:8000/health
 3. Check the Graphiti documentation: https://github.com/getzep/graphiti
-4. Re-run /context-hub-setup with a different endpoint
+4. Update the endpoint in the plugin's .mcp.json if needed
 ```
 
 ## Step 4: Write Configuration
+
+This conf file is sourced by the plugin's hooks to inject group_id and companion status into prompts.
 
 Run this bash command (substitute the user's values):
 
@@ -50,8 +51,8 @@ mkdir -p "$HOME/.config/claude"
 cat > "$HOME/.config/claude/graphiti-context-hub.conf" << EOF
 # Graphiti Context Hub Configuration
 # Created by /context-hub-setup
+# Sourced by plugin hooks (session-start.sh, context-reminder.sh)
 GRAPHITI_GROUP_ID={user_group_id}
-GRAPHITI_ENDPOINT={user_endpoint}
 SERENA_ENABLED={true_or_false}
 EOF
 
@@ -65,7 +66,6 @@ Show this summary with the actual values filled in:
 ```
 ✓ Setup Complete
 
-  Endpoint:  {endpoint}
   Group ID:  {group_id}
   Serena:    {enabled/not found}
   Context7:  {enabled/not found}
