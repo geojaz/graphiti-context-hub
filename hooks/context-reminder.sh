@@ -19,7 +19,7 @@ fi
 
 case "$HOOK_TYPE" in
     prompt-submit)
-        echo "{\"additionalContext\": \"Context hub active (group_id: ${GROUP_ID}, repo: ${REPO_NAME}). Use /context_gather for multi-source retrieval before starting new work areas. Use /memory-save to capture decisions, patterns, and findings worth preserving. Search Graphiti (search_memory_facts + search_nodes with group_ids: [\\\"${GROUP_ID}\\\"]) when working in unfamiliar code.\"}"
+        echo "{\"additionalContext\": \"REQUIRED: Before starting any task, you MUST run /context_gather with keywords from the user's request. Do this BEFORE reading files, running commands, or invoking other skills. This retrieves prior decisions, patterns, and relevant context from the knowledge graph and documentation sources. After completing work, use /memory-save to capture important decisions and findings. Repo: ${REPO_NAME}, group_id: ${GROUP_ID}.\"}"
         ;;
     edit-write)
         echo "{\"additionalContext\": \"Before modifying code: Have you queried Graphiti (search_memory_facts + search_nodes with group_ids: [\\\"${GROUP_ID}\\\"]) for prior decisions and patterns in this area?${SERENA_CLAUSE} If not, use /context_gather first.\"}"
