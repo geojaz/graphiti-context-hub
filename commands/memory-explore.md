@@ -15,9 +15,8 @@ Explore the knowledge graph starting from: **$ARGUMENTS**
 **Step 1: Load config**
 
 ```bash
-[ -f "$HOME/.config/claude/graphiti-context-hub.conf" ] && source "$HOME/.config/claude/graphiti-context-hub.conf"
-[ -f ".context-hub.conf" ] && source ".context-hub.conf"
-
+# Load config
+source "$HOME/.config/claude/graphiti-context-hub.conf" 2>/dev/null
 GROUP_ID="${GRAPHITI_GROUP_ID:-main}"
 REPO_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$PWD")
 

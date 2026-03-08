@@ -15,13 +15,8 @@ Search Graphiti for: **$ARGUMENTS**
 **Step 1: Load config and detect repo**
 
 ```bash
-# Load global config
-[ -f "$HOME/.config/claude/graphiti-context-hub.conf" ] && source "$HOME/.config/claude/graphiti-context-hub.conf"
-
-# Load local config (overrides global)
-[ -f ".context-hub.conf" ] && source ".context-hub.conf"
-
-# Set default
+# Load config
+source "$HOME/.config/claude/graphiti-context-hub.conf" 2>/dev/null
 GROUP_ID="${GRAPHITI_GROUP_ID:-main}"
 
 # Detect repo name

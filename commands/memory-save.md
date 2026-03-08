@@ -15,9 +15,8 @@ Extract relevant context from the current conversation and save it using Graphit
 **Step 1: Load config and detect repo**
 
 ```bash
-[ -f "$HOME/.config/claude/graphiti-context-hub.conf" ] && source "$HOME/.config/claude/graphiti-context-hub.conf"
-[ -f ".context-hub.conf" ] && source ".context-hub.conf"
-
+# Load config
+source "$HOME/.config/claude/graphiti-context-hub.conf" 2>/dev/null
 GROUP_ID="${GRAPHITI_GROUP_ID:-main}"
 REPO_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$PWD")
 
@@ -82,4 +81,4 @@ Graphiti will automatically extract entities and relationships from this memory.
 - **No adapter layer**: Calls Graphiti MCP directly
 - **Auto-extracts entities**: Graphiti automatically identifies concepts and relationships
 - **Atomic memories**: Keep focused on one concept per save
-- **Group isolation**: Memories are scoped by group_id (auto-detected from git repo)
+- **Group isolation**: Memories are scoped by group_id (configured in ~/.config/claude/graphiti-context-hub.conf)

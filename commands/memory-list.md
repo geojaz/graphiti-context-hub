@@ -15,9 +15,8 @@ List recent memories for the current project.
 **Step 1: Load config**
 
 ```bash
-[ -f "$HOME/.config/claude/graphiti-context-hub.conf" ] && source "$HOME/.config/claude/graphiti-context-hub.conf"
-[ -f ".context-hub.conf" ] && source ".context-hub.conf"
-
+# Load config
+source "$HOME/.config/claude/graphiti-context-hub.conf" 2>/dev/null
 GROUP_ID="${GRAPHITI_GROUP_ID:-main}"
 echo "Listing episodes from group: $GROUP_ID"
 ```
@@ -78,5 +77,5 @@ Found 5 recent episodes:
 
 - **No adapter layer**: Calls Graphiti MCP directly
 - **Episodes vs Nodes**: This lists raw episodes (saved memories), not extracted entities
-- **Group isolation**: Only shows episodes for the current project's group_id
+- **Group isolation**: Memories are scoped by group_id (configured in ~/.config/claude/graphiti-context-hub.conf)
 - **Default limit**: Shows 20 most recent if no argument provided
