@@ -190,7 +190,7 @@ mcp__plugin_serena_serena__find_symbol({
 1. **Use `relative_path`** to scope searches - much faster than searching entire codebase
 2. **Start with `include_body: false`** - get structure first, read code only when needed
 3. **Use `depth: 0`** initially - expand to children only when exploring specific classes
-4. **Combine with Forgetful** - create memories for important architectural findings
+4. **Combine with Graphiti** - save important architectural findings as episodes
 
 ## Language Support
 
